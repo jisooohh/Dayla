@@ -380,50 +380,19 @@ small {
   gap: 7px;
   align-items: center;
 }
-.voice-trigger {
-  flex-direction: column;
-  gap: 18px;
+.character-button {
+  display: flex;
+  margin: 0 auto;
+  padding: 0;
   border: 0;
-  border-radius: 24px;
-  background: transparent;
-  padding: 12px 24px;
-  font-size: 17px;
-  font-weight: 500;
-  color: var(--ink);
-}
-.voice-trigger:hover {
-  background: transparent;
-}
-.voice-orb {
-  display: grid;
-  place-items: center;
-  width: 96px;
-  height: 96px;
   border-radius: 50%;
-  background: linear-gradient(145deg, #fff6d7, #f4d77d);
-  border: 1px solid #fff9e8;
-  box-shadow:
-    0 8px 28px #a77c2420,
-    0 0 0 8px #ffffff66,
-    inset 0 2px 4px #ffffffb3;
-  color: #6a4d20;
-  transition:
-    box-shadow 0.2s,
-    transform 0.2s;
+  background: transparent;
 }
-.voice-trigger:hover .voice-orb {
-  transform: translateY(-2px);
-  box-shadow:
-    0 12px 32px #a77c2430,
-    0 0 0 10px #ffffff80,
-    inset 0 2px 4px #ffffffb3;
+.character-button:hover {
+  background: #ffffff66;
 }
-.voice-trigger.is-listening .voice-orb {
-  background: #765323;
-  color: white;
-  box-shadow:
-    0 0 0 8px #f2d78b80,
-    0 0 0 16px #f2d78b30;
+.character-button:active {
+  transform: scale(0.97);
 }
 .send-button {
   background: #765323;

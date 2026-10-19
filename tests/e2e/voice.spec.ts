@@ -281,3 +281,23 @@ test('configured voice plays decoded provider audio and can be stopped', async (
   await page.getByRole('button', { name: 'Stop speaking', exact: true }).click();
   await expect(page.locator('.character-idle')).toBeVisible();
 });
+
+test('the character starts and finishes listening with pointer or keyboard', async ({ page }) => {
+  await browserVoices(page);
+  await page.goto('/');
+  const character = page.getByRole('button', { name: 'Start speaking', exact: true });
+  await expect(character.locator('.dayla-character')).toBeVisible();
+  await expect(character).toBeEnabled();
+  await character.click();
+  await page.getByRole('button', { name: 'Use browser voice' }).click();
+  await expect(page.getByText('I’m listening. Tap me again to finish.')).toBeVisible();
+  await page.getByRole('button', { name: 'Finish speaking', exact: true }).click();
+  await expect(character).toBeVisible();
+  await character.press('Enter');
+  await expect(page.getByRole('button', { name: 'Finish speaking', exact: true })).toBeVisible();
+  expect(
+    await page.evaluate(() => (window as unknown as HarnessWindow).__voiceHarness.starts),
+  ).toBe(2);
+  await page.getByRole('button', { name: 'Finish speaking', exact: true }).press('Space');
+  await expect(character).toBeVisible();
+});

@@ -5,7 +5,6 @@ import {
   Heart,
   PanelLeft,
   MessageCircle,
-  Mic,
   Newspaper,
   Pill,
   RotateCcw,
@@ -368,29 +367,26 @@ export default function App() {
           {view === 'conversation' ? (
             <div className={`conversation ${turns.length ? 'has-turns' : ''}`}>
               <div className="welcome">
-                <DaylaCharacter phase={voice.phase} level={voice.level} />
+                <button
+                  type="button"
+                  className="character-button"
+                  aria-label={voice.phase === 'listening' ? 'Finish speaking' : 'Start speaking'}
+                  aria-describedby="voice-status"
+                  title={voice.phase === 'listening' ? 'Tap to finish' : 'Tap to talk'}
+                  disabled={!online || sending}
+                  onClick={micClick}
+                >
+                  <DaylaCharacter phase={voice.phase} level={voice.level} />
+                </button>
                 <h1 tabIndex={-1}>{greeting}</h1>
                 <p>How are you feeling today?</p>
               </div>
-              <button
-                type="button"
-                className={`voice-trigger ${voice.phase === 'listening' ? 'is-listening' : ''}`}
-                aria-label={voice.phase === 'listening' ? 'Finish speaking' : 'Start speaking'}
-                aria-describedby="voice-status"
-                disabled={!online || sending}
-                onClick={micClick}
-              >
-                <span className="voice-orb" aria-hidden="true">
-                  {voice.phase === 'listening' ? (
-                    <Square size={28} />
-                  ) : (
-                    <Mic size={32} strokeWidth={1.6} />
-                  )}
-                </span>
-                <span>{voice.phase === 'listening' ? 'Finish speaking' : 'Start speaking'}</span>
-              </button>
               <div id="voice-status" className="conversation-status" role="status">
-                {sending ? 'Thinking…' : voice.message || 'I’m here. Take your time.'}
+                {sending
+                  ? 'Thinking…'
+                  : voice.phase === 'listening'
+                    ? 'I’m listening. Tap me again to finish.'
+                    : voice.message || 'Tap me to start speaking.'}
               </div>
               {(voice.phase === 'speaking' ||
                 voice.phase === 'listening' ||
