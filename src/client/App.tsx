@@ -373,8 +373,41 @@ export default function App() {
                 <h1 tabIndex={-1}>{greeting}</h1>
                 <p>How are you feeling today?</p>
               </div>
+              <button
+                type="button"
+                className={`voice-trigger ${voice.phase === 'listening' ? 'is-listening' : ''}`}
+                aria-label={voice.phase === 'listening' ? 'Finish speaking' : 'Start speaking'}
+                aria-describedby="voice-status"
+                disabled={!online || sending}
+                onClick={micClick}
+              >
+                <span className="voice-orb" aria-hidden="true">
+                  {voice.phase === 'listening' ? (
+                    <Square size={28} />
+                  ) : (
+                    <Mic size={32} strokeWidth={1.6} />
+                  )}
+                </span>
+                <span>{voice.phase === 'listening' ? 'Finish speaking' : 'Start speaking'}</span>
+              </button>
+              <div id="voice-status" className="conversation-status" role="status">
+                {sending ? 'Thinking…' : voice.message || 'I’m here. Take your time.'}
+              </div>
+              {(voice.phase === 'speaking' ||
+                voice.phase === 'listening' ||
+                voice.phase === 'thinking') && (
+                <button className="quiet-control" onClick={cancelSpeech}>
+                  <Square size={16} />
+                  Stop{' '}
+                  {voice.phase === 'listening'
+                    ? 'listening'
+                    : voice.phase === 'thinking'
+                      ? 'waiting'
+                      : 'speaking'}
+                </button>
+              )}
               <form
-                className={`composer ${voice.phase === 'listening' ? 'is-listening' : ''}`}
+                className="composer"
                 onSubmit={(e) => {
                   e.preventDefault();
                   void send(input);
@@ -387,23 +420,12 @@ export default function App() {
                   id="message"
                   value={input}
                   maxLength={1000}
-                  placeholder={
-                    voice.phase === 'listening' ? 'I’m listening…' : 'Talk to me, or type here…'
-                  }
+                  placeholder="Or type a message…"
                   onChange={(e) => setInput(e.target.value)}
                   disabled={sending}
                   autoComplete="off"
                 />
                 <div className="composer-actions">
-                  <button
-                    type="button"
-                    className={`mic-button icon-button ${voice.phase === 'listening' ? 'listening' : ''}`}
-                    aria-label={voice.phase === 'listening' ? 'Finish speaking' : 'Start speaking'}
-                    disabled={!online || sending}
-                    onClick={micClick}
-                  >
-                    {voice.phase === 'listening' ? <Square size={23} /> : <Mic size={25} />}
-                  </button>
                   <button
                     type="submit"
                     className="send-button icon-button"
@@ -429,22 +451,6 @@ export default function App() {
                     Use browser voice
                   </button>
                 </div>
-              )}
-              <div className="conversation-status" role="status">
-                {sending ? 'Thinking…' : voice.message || 'A moment together, at your pace.'}
-              </div>
-              {(voice.phase === 'speaking' ||
-                voice.phase === 'listening' ||
-                voice.phase === 'thinking') && (
-                <button className="quiet-control" onClick={cancelSpeech}>
-                  <Square size={16} />
-                  Stop{' '}
-                  {voice.phase === 'listening'
-                    ? 'listening'
-                    : voice.phase === 'thinking'
-                      ? 'waiting'
-                      : 'speaking'}
-                </button>
               )}
               {!!turns.length && (
                 <section
