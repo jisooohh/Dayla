@@ -1,21 +1,19 @@
 :root {
-  font-family:
-    'DM Sans',
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
-  color: #34352f;
-  background: #fafaf8;
+  font-family: Georgia, 'Times New Roman', serif;
+  color: #443b2d;
+  background: #fffcf4;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   font-size: 18px;
-  --ink: #34352f;
-  --muted: #72746d;
-  --accent: #4d634f;
-  --line: #e6e7e0;
-  --cream: #f3f4ec;
+  --ink: #443b2d;
+  --muted: #756a58;
+  --accent: #765323;
+  --line: #e7ddc9;
+  --cream: #fff6db;
+  --glass: #ffffff9e;
+  --glass-edge: #ffffffeb;
+  --glass-shadow: 0 12px 40px #8c6c2510, inset 0 1px 0 #fff;
   --radius: 24px;
 }
 * {
@@ -23,6 +21,11 @@
 }
 body {
   margin: 0;
+  background:
+    radial-gradient(ellipse at 5% 35%, #f5d67b38, transparent 45%),
+    radial-gradient(ellipse at 65% 62%, #f8d46a40, transparent 48%),
+    radial-gradient(ellipse at 88% 12%, #ffedb533, transparent 38%), #fffcf4;
+  background-attachment: fixed;
 }
 button,
 input,
@@ -58,8 +61,8 @@ button,
 }
 button:hover,
 .button:hover {
-  background: #f0f2e9;
-  border-color: #b7bdad;
+  background: #fff4d7;
+  border-color: #c9b88b;
 }
 button:disabled {
   opacity: 0.48;
@@ -69,7 +72,7 @@ button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 select:focus-visible {
-  outline: 3px solid #55704d;
+  outline: 3px solid #936c25;
   outline-offset: 4px;
 }
 h1:focus {
@@ -78,7 +81,7 @@ h1:focus {
 input,
 select {
   min-width: 0;
-  border: 1px solid #b9bcb0;
+  border: 1px solid #bcae92;
   border-radius: 14px;
   padding: 14px;
   background: white;
@@ -92,15 +95,9 @@ p {
 }
 h1,
 h2 {
-  font-family:
-    'Manrope',
-    'DM Sans',
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
-  font-weight: 500;
-  letter-spacing: -0.045em;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 400;
+  letter-spacing: -0.035em;
   line-height: 1.22;
 }
 h1 {
@@ -159,9 +156,9 @@ small {
   min-height: 72px;
 }
 .primary:hover {
-  background: #354b38;
+  background: #60421c;
   color: #fff;
-  border-color: #354b38;
+  border-color: #60421c;
 }
 .row {
   display: flex;
@@ -201,8 +198,11 @@ small {
   grid-template-columns: 244px minmax(0, 1fr);
 }
 .sidebar {
-  background: #f1f2eb;
-  border: 1px solid #e9eae2;
+  background: var(--glass);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: blur(24px) saturate(125%);
+  backdrop-filter: blur(24px) saturate(125%);
   border-radius: 24px;
   margin: 12px;
   overflow-x: hidden;
@@ -243,18 +243,18 @@ small {
   padding: 13px 14px;
   background: transparent;
   border: 1px solid transparent;
-  font-size: 16px;
-  color: #65695e;
+  font-size: 17px;
+  color: #70634f;
   border-radius: 13px;
   font-weight: 450;
 }
 .nav-item.active {
-  background: #e3e7d9;
-  color: #354a35;
+  background: #f5d87555;
+  color: #644b22;
   font-weight: 600;
 }
 .nav-item:hover {
-  background: #e9ecdf;
+  background: #ffffffad;
   border-color: transparent;
 }
 .sidebar-bottom {
@@ -263,7 +263,7 @@ small {
   align-items: flex-start;
   gap: 12px;
   padding: 35px 19px 0;
-  color: #616657;
+  color: #756a58;
 }
 .sidebar-bottom p {
   font-size: 13px;
@@ -274,7 +274,7 @@ small {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #8c9d74;
+  background: #ad8634;
   margin-top: 8px;
 }
 .workspace {
@@ -283,10 +283,7 @@ small {
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
-  background:
-    radial-gradient(ellipse 480px 300px at 60% 52%, #dfeafd55, transparent 80%),
-    radial-gradient(ellipse 430px 310px at 40% 65%, #f4e8dc66, transparent 85%),
-    radial-gradient(ellipse 600px 350px at 75% 80%, #eef0e633, transparent 90%), #fdfdfb;
+  background: transparent;
 }
 .topbar {
   height: 91px;
@@ -295,9 +292,9 @@ small {
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  font-size: 12px;
+  font-size: 14px;
   letter-spacing: 0.02em;
-  color: #81857b;
+  color: #756a58;
 }
 .topbar-date {
   font-variant-numeric: tabular-nums;
@@ -324,12 +321,12 @@ small {
 .welcome h1 {
   font-size: clamp(35px, 4vw, 49px);
   margin: 23px 0 15px;
-  font-weight: 500;
-  letter-spacing: -0.045em;
+  font-weight: 400;
+  letter-spacing: -0.035em;
 }
 .welcome p {
   font-size: 20px;
-  color: #85867e;
+  color: #756a58;
   margin: 0;
   font-weight: 400;
 }
@@ -344,21 +341,22 @@ small {
   gap: 14px;
   width: 100%;
   padding: 12px 13px 12px 29px;
-  border: 1px solid #e8e9e2;
+  border: 1px solid #fff;
   border-radius: 30px;
-  background: #fffffff2;
+  background: #fff;
   box-shadow:
-    0 9px 35px #596c6610,
-    0 2px 4px #354a3510;
+    0 18px 55px #93732b14,
+    0 2px 8px #93732b08,
+    0 0 0 7px #ffffff40;
   transition:
     border-color 0.2s,
     box-shadow 0.2s;
 }
 .composer:focus-within {
-  border-color: #a4b39a;
+  border-color: #c9a756;
   box-shadow:
-    0 9px 35px #596c6610,
-    0 0 0 3px #dce5d64a;
+    0 18px 55px #93732b14,
+    0 0 0 4px #eacb7933;
 }
 .composer input {
   background: transparent;
@@ -371,7 +369,7 @@ small {
   color: var(--ink);
 }
 .composer input::placeholder {
-  color: #8a8e83;
+  color: #7e7464;
 }
 .composer input:focus-visible {
   outline: none;
@@ -382,35 +380,35 @@ small {
   align-items: center;
 }
 .mic-button {
-  background: #f0f2ea;
-  color: #53624b;
+  background: #fff2c9;
+  color: #785b25;
 }
 .mic-button:hover,
 .mic-button.listening {
-  background: #e1e9d5;
+  background: #f9e5a8;
 }
 .send-button {
-  background: #52634b;
+  background: #765323;
   color: white;
 }
 .send-button:hover {
-  background: #3b4d35;
+  background: #60421c;
 }
 .send-button:disabled {
-  background: #eef0e9;
-  color: #7b8473;
+  background: #f7f0df;
+  color: #8b7b5c;
   opacity: 1;
 }
 .composer.is-listening {
-  border-color: #8caa78;
+  border-color: #b28a32;
   box-shadow:
-    0 0 0 6px #dcebd155,
-    0 9px 35px #596c6610;
+    0 0 0 6px #f7df9555,
+    0 9px 35px #93732b14;
 }
 .conversation-status {
   font-size: 13px;
   text-align: center;
-  color: #7d8275;
+  color: #756a58;
   min-height: 28px;
   margin-top: 21px;
   line-height: 1.65;
@@ -422,14 +420,14 @@ small {
   border: 0;
   background: transparent;
   font-size: 13px;
-  color: #6b7662;
+  color: #756a58;
 }
 .voice-consent {
   margin-top: 20px;
   width: 100%;
   padding: 18px 22px;
-  background: #eff3e9;
-  border: 1px solid #dae1d3;
+  background: #fff7df;
+  border: 1px solid #e7ddc9;
   border-radius: 18px;
 }
 .voice-consent p {
@@ -464,7 +462,7 @@ small {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  color: #777f70;
+  color: #756a58;
 }
 .conversation-turn p {
   font-size: 24px;
@@ -475,7 +473,7 @@ small {
 .conversation-turn.user {
   align-self: flex-end;
   border-radius: 22px;
-  background: #eef0e7;
+  background: #ffffffb3;
   padding: 15px 23px;
   max-width: 85%;
 }
@@ -486,7 +484,7 @@ small {
   display: none;
 }
 .conversation-confirmation {
-  background: #edf2e7;
+  background: #fff7df;
   padding: 24px;
   border-radius: 22px;
   font-size: 23px;
@@ -507,7 +505,7 @@ small {
   height: 44px;
   min-height: 44px;
   border-radius: 13px;
-  background: #f1f2eb;
+  background: #ffffff80;
   border: 1px solid transparent;
 }
 .nav-item svg {
@@ -556,14 +554,14 @@ small {
   font-size: 12px;
   letter-spacing: 0.13em;
   font-weight: 600;
-  color: #758068;
+  color: #756a58;
   margin-bottom: 14px;
 }
 .back-button {
   border: 0;
   background: transparent;
   font-size: 14px;
-  color: #6a765f;
+  color: #756a58;
   padding: 0;
   min-height: 40px;
   margin-bottom: 28px;
@@ -575,19 +573,22 @@ small {
 .tag {
   display: inline-flex;
   border-radius: 9px;
-  background: #edf0e6;
+  background: #fff1c7;
   padding: 7px 11px;
   font-size: 13px;
   font-weight: 500;
-  color: #5e7052;
+  color: #785b25;
 }
 .medication-block,
 .visit-row,
 .draft-panel,
 .news-list article,
 .settings-sections > section {
-  background: #ffffffcc;
-  border: 1px solid var(--line);
+  background: var(--glass);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: blur(20px) saturate(125%);
+  backdrop-filter: blur(20px) saturate(125%);
   border-radius: 24px;
   padding: 30px;
   margin-bottom: 22px;
@@ -610,27 +611,27 @@ small {
   justify-content: flex-start;
   padding: 17px 21px;
   font-size: 24px;
-  border-color: #dadfd1;
+  border-color: #e7ddc9;
 }
 .response-options button > span {
   flex: 1;
   text-align: left;
 }
 .confirmation-value {
-  background: #eef2e8;
+  background: #fff4d7;
   border-radius: 16px;
   padding: 18px;
   font-size: 28px;
 }
 .empty-state {
   padding: 40px 30px;
-  border: 1px dashed #cbd1c1;
+  border: 1px dashed #d8c9a7;
   border-radius: 24px;
   text-align: center;
-  background: #f4f6ed88;
+  background: #ffffff80;
 }
 .empty-state > svg {
-  color: #8a987a;
+  color: #a4874b;
   margin-bottom: 20px;
 }
 .empty-state p {
@@ -659,7 +660,7 @@ small {
 .record-dot {
   width: 9px;
   height: 9px;
-  background: #93a478;
+  background: #ad8634;
   border-radius: 50%;
   margin-top: 10px;
   flex-shrink: 0;
@@ -677,8 +678,8 @@ small {
   align-items: flex-start;
 }
 .schedule-icon {
-  background: #eff1e7;
-  color: #69805a;
+  background: #fff1c7;
+  color: #785b25;
   padding: 18px;
   border-radius: 18px;
   display: flex;
@@ -731,7 +732,7 @@ small {
   margin-top: 5px;
 }
 .topic-list button > svg {
-  color: #7b8d64;
+  color: #967738;
 }
 .draft-panel {
   margin-top: 28px;
@@ -834,7 +835,7 @@ small {
   flex-wrap: wrap;
   padding: 18px;
   border-top: 1px solid var(--line);
-  background: #f2f4eb;
+  background: #ffffff80;
   font-size: 13px;
 }
 .presenter-controls button {
@@ -960,11 +961,11 @@ dialog h2 {
     left: 17px;
     top: 17px;
     z-index: 20;
-    background: #f1f3eb;
+    background: #fffcf0e6;
     width: 45px;
     height: 45px;
     min-height: 45px;
-    border: 1px solid #e7eae0;
+    border: 1px solid #ffffffeb;
   }
   .menu-backdrop {
     display: block;
@@ -972,7 +973,7 @@ dialog h2 {
     inset: 0;
     border: 0;
     border-radius: 0;
-    background: #32382f33;
+    background: #59482033;
     z-index: 10;
     width: 100%;
     height: 100%;
@@ -1159,15 +1160,9 @@ dialog h2 {
   display: inline-flex;
   align-items: center;
   gap: 11px;
-  font-family:
-    'Manrope',
-    'DM Sans',
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
+  font-family: Georgia, 'Times New Roman', serif;
   font-size: 29px;
-  font-weight: 750;
+  font-weight: 500;
   letter-spacing: -1.5px;
   line-height: 1;
 }
