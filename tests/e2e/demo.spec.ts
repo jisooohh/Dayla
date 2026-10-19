@@ -265,3 +265,55 @@ test('minimal home is accessible and reflows at 200 percent and mobile widths', 
     true,
   );
 });
+
+test('rounded navigation starts collapsed and supports pointer and keyboard toggling', async ({
+  page,
+}, testInfo) => {
+  const sidebar = page.locator('#dayla-sidebar');
+  const toggle = page.getByRole('button', { name: 'Open navigation', exact: true });
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(sidebar.locator('.nav-item span').first()).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Medication', exact: true })).toBeVisible();
+  expect(await sidebar.evaluate((element) => getComputedStyle(element).borderRadius)).toBe('24px');
+  await page.screenshot({
+    animations: 'disabled',
+    path: testInfo.outputPath('sidebar-collapsed.png'),
+  });
+
+  await toggle.click();
+  const close = page.getByRole('button', { name: 'Close navigation', exact: true });
+  await expect(close).toHaveAttribute('aria-expanded', 'true');
+  await expect(sidebar.locator('.nav-item span').first()).toBeVisible();
+  await page.getByRole('button', { name: 'Medication', exact: true }).click();
+  await expect(close).toHaveAttribute('aria-expanded', 'true');
+  await page.getByRole('button', { name: 'Conversation', exact: true }).click();
+  await page.screenshot({
+    animations: 'disabled',
+    path: testInfo.outputPath('sidebar-expanded.png'),
+  });
+  await close.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await toggle.press('Enter');
+  await page.keyboard.press('Escape');
+  await expect(toggle).toBeFocused();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await page.reload();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(sidebar).toBeHidden();
+  await toggle.click();
+  await expect(sidebar).toBeVisible();
+  await page.screenshot({
+    animations: 'disabled',
+    path: testInfo.outputPath('sidebar-mobile-open.png'),
+  });
+  await page.keyboard.press('Escape');
+  await expect(sidebar).toBeHidden();
+  await expect(toggle).toBeFocused();
+  await toggle.click();
+  await page
+    .getByRole('button', { name: 'Dismiss navigation' })
+    .click({ position: { x: 370, y: 400 } });
+  await expect(sidebar).toBeHidden();
+});

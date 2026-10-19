@@ -194,23 +194,32 @@ small {
 .app-shell {
   min-height: 100vh;
   display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  transition: grid-template-columns 0.2s ease;
+}
+.app-shell.navigation-open {
   grid-template-columns: 244px minmax(0, 1fr);
 }
 .sidebar {
   background: #f1f2eb;
-  border-right: 1px solid #e9eae2;
+  border: 1px solid #e9eae2;
+  border-radius: 24px;
+  margin: 12px;
+  overflow-x: hidden;
+  overflow-y: auto;
   position: sticky;
-  top: 0;
-  height: 100dvh;
+  top: 12px;
+  height: calc(100dvh - 24px);
   display: flex;
   flex-direction: column;
-  padding: 44px 19px 29px;
+  padding: 70px 8px 24px;
   z-index: 5;
 }
 .wordmark {
   display: flex;
   align-items: center;
-  padding: 0 19px;
+  padding: 0 10px;
+  flex-shrink: 0;
   text-decoration: none;
   width: max-content;
   max-width: 100%;
@@ -225,13 +234,13 @@ small {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-top: 65px;
+  margin-top: 36px;
 }
 .nav-item {
   justify-content: flex-start;
   gap: 16px;
   min-height: 57px;
-  padding: 13px 19px;
+  padding: 13px 14px;
   background: transparent;
   border: 1px solid transparent;
   font-size: 16px;
@@ -489,7 +498,41 @@ small {
   min-width: 140px;
   min-height: 64px;
 }
-.mobile-menu,
+.navigation-toggle {
+  position: fixed;
+  left: 26px;
+  top: 26px;
+  z-index: 20;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  border-radius: 13px;
+  background: #f1f2eb;
+  border: 1px solid transparent;
+}
+.nav-item svg {
+  flex-shrink: 0;
+}
+@media (min-width: 761px) {
+  .sidebar:not(.is-open) .nav-item {
+    justify-content: center;
+    padding-inline: 0;
+  }
+  .sidebar:not(.is-open) .nav-item span,
+  .sidebar:not(.is-open) .dayla-logo > span,
+  .sidebar:not(.is-open) .sidebar-bottom p {
+    display: none;
+  }
+  .sidebar:not(.is-open) .wordmark {
+    width: 100%;
+    justify-content: center;
+    padding: 0;
+  }
+  .sidebar:not(.is-open) .sidebar-bottom {
+    justify-content: center;
+    padding-inline: 0;
+  }
+}
 .menu-backdrop {
   display: none;
 }
@@ -845,13 +888,6 @@ dialog h2 {
   font-size: 24px;
 }
 @media (min-width: 1500px) {
-  .app-shell {
-    grid-template-columns: 260px minmax(0, 1fr);
-  }
-  .sidebar {
-    padding-left: 23px;
-    padding-right: 23px;
-  }
   .conversation {
     width: 780px;
   }
@@ -867,27 +903,6 @@ dialog h2 {
   }
 }
 @media (max-width: 1000px) {
-  .app-shell {
-    grid-template-columns: 205px minmax(0, 1fr);
-  }
-  .sidebar {
-    padding-left: 12px;
-    padding-right: 12px;
-  }
-  .nav-item {
-    font-size: 14px;
-    gap: 12px;
-    padding: 13px 14px;
-  }
-  .sidebar nav {
-    margin-top: 45px;
-  }
-  .wordmark {
-    padding-left: 14px;
-  }
-  .wordmark svg {
-    width: 130px;
-  }
   .topbar {
     padding: 0 30px;
   }
@@ -920,9 +935,9 @@ dialog h2 {
   }
   .sidebar {
     position: fixed;
-    inset: 0 auto 0 0;
-    width: 244px;
-    transform: translateX(-100%);
+    inset: 0 auto auto 0;
+    width: min(244px, calc(100vw - 24px));
+    transform: translateX(calc(-100% - 24px));
     visibility: hidden;
     transition: transform 0.2s;
     z-index: 15;
@@ -939,7 +954,7 @@ dialog h2 {
     font-size: 16px;
     min-height: 56px;
   }
-  .mobile-menu {
+  .navigation-toggle {
     display: flex;
     position: fixed;
     left: 17px;

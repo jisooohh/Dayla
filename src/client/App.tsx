@@ -3,7 +3,8 @@ import {
   ArrowUp,
   CalendarDays,
   Heart,
-  Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   MessageCircle,
   Mic,
   Newspaper,
@@ -11,7 +12,6 @@ import {
   RotateCcw,
   Settings as SettingsIcon,
   Square,
-  X,
 } from 'lucide-react';
 import type { ConversationReply, Snapshot } from '../shared/contracts';
 import { api, time, reportLabels } from './lib/api';
@@ -41,6 +41,18 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuToggleRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false);
+        menuToggleRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [menuOpen]);
   const [input, setInput] = useState('');
   const [turns, setTurns] = useState<Turn[]>([]);
   const [confirmation, setConfirmation] = useState<ConversationReply['confirmation']>();
@@ -192,7 +204,7 @@ export default function App() {
   }
   function navigate(next: View) {
     setView(next);
-    setMenuOpen(false);
+    if (window.matchMedia('(max-width: 760px)').matches) setMenuOpen(false);
     setError('');
     window.scrollTo({ top: 0, behavior: 'instant' });
     requestAnimationFrame(() => document.querySelector<HTMLElement>('main h1')?.focus());
@@ -273,19 +285,24 @@ export default function App() {
   const greeting = hour < 12 ? 'Good morning.' : hour < 18 ? 'Good afternoon.' : 'Good evening.';
   const micClick = () => (voice.phase === 'listening' ? voice.finish() : void voice.start());
   return (
-    <div className={`app-shell ${snapshot?.settings.largeText ? 'large-text' : ''}`}>
+    <div
+      className={`app-shell ${menuOpen ? 'navigation-open' : ''} ${snapshot?.settings.largeText ? 'large-text' : ''}`}
+    >
       <a className="skip-link" href="#main">
         Skip to content
       </a>
       <button
-        className="mobile-menu icon-button"
+        ref={menuToggleRef}
+        className="navigation-toggle icon-button"
         aria-label={menuOpen ? 'Close navigation' : 'Open navigation'}
         aria-expanded={menuOpen}
-        onClick={() => setMenuOpen(!menuOpen)}
+        aria-controls="dayla-sidebar"
+        title={menuOpen ? 'Close navigation' : 'Open navigation'}
+        onClick={() => setMenuOpen((open) => !open)}
       >
-        {menuOpen ? <X /> : <Menu />}
+        {menuOpen ? <PanelLeftClose aria-hidden="true" /> : <PanelLeftOpen aria-hidden="true" />}
       </button>
-      <aside className={`sidebar ${menuOpen ? 'is-open' : ''}`}>
+      <aside id="dayla-sidebar" className={`sidebar ${menuOpen ? 'is-open' : ''}`}>
         <a
           className="wordmark"
           href="#"
@@ -303,6 +320,8 @@ export default function App() {
               key={item.view}
               className={`nav-item ${view === item.view ? 'active' : ''}`}
               aria-current={view === item.view ? 'page' : undefined}
+              aria-label={item.title}
+              title={menuOpen ? undefined : item.title}
               onClick={() => navigate(item.view)}
             >
               <item.icon size={23} aria-hidden="true" />
@@ -322,8 +341,11 @@ export default function App() {
       {menuOpen && (
         <button
           className="menu-backdrop"
-          aria-label="Close navigation"
-          onClick={() => setMenuOpen(false)}
+          aria-label="Dismiss navigation"
+          onClick={() => {
+            setMenuOpen(false);
+            menuToggleRef.current?.focus();
+          }}
         />
       )}
       <div className="workspace">

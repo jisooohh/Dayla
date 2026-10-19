@@ -4,7 +4,7 @@
 
 The 2026-10-20 voice-first request supersedes the earlier Korean card dashboard. The interface is English. Home contains a time-of-day greeting, a small original character and one composer with microphone and send controls. Blue, lavender and peach light sits behind the interaction area; generous white space keeps the starting state quiet.
 
-The left sidebar opens Conversation, Medication, Schedule, Family, News and Settings. Secondary details should not become a dashboard above the home composer. The original Dayla SVG mark and wordmark identify the sidebar; the character is a separate original drawing, not copied Grok branding.
+The left sidebar opens Conversation, Medication, Schedule, Family, News and Settings. It starts as a compact icon rail on desktop, with a toggle to reveal labels. The panel has 24px rounded corners and a 12px inset from the viewport. On mobile it starts hidden and opens as a rounded drawer; Escape and the backdrop close it. Desktop navigation preserves the expanded state, while selecting a mobile destination closes the drawer. Secondary details should not become a dashboard above the home composer. The original Dayla SVG mark and wordmark identify the sidebar; the character is a separate original drawing, not copied Grok branding.
 
 ## Interaction
 
