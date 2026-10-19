@@ -46,3 +46,31 @@ export function supportsTimeZone(value: string): boolean {
     return false;
   }
 }
+
+/** Calendar fields in the configured zone, independent of the host timezone. */
+export function localDate(instant: string, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date(instant));
+  const part = (type: string) => parts.find((item) => item.type === type)!.value;
+  return `${part('year')}-${part('month')}-${part('day')}`;
+}
+
+/** Resolve a local daytime schedule using the zone's offset on that date (including DST). */
+export function scheduledInstant(date: string, hour: number, timeZone: string): string {
+  const target = Date.parse(`${date}T${String(hour).padStart(2, '0')}:00:00Z`);
+  let guess = target;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const iso = new Date(guess).toISOString();
+    const time = localTime(iso, timeZone);
+    const represented = Date.parse(
+      `${localDate(iso, timeZone)}T${String(time.hour).padStart(2, '0')}:${String(time.minute).padStart(2, '0')}:00Z`,
+    );
+    if (represented === target) return iso;
+    guess += target - represented;
+  }
+  throw new DomainError('This local schedule time is unavailable in the selected time zone.');
+}

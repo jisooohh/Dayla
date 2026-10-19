@@ -24,12 +24,12 @@ describe('durable self reports', () => {
     const store = setup();
     expect(store.snapshot().medications[0].response).toBeNull();
     const request = { value: 'taken' as const, requestId: 'first', expectedResponseId: null };
-    expect(() => store.respond('demo-med-0900', request)).toThrow('예정 시간');
+    expect(() => store.respond('demo-med-0900', request)).toThrow('scheduled time');
     store.advance(1);
     const first = store.respond('demo-med-0900', request).responses[0];
     expect(store.respond('demo-med-0900', request).responses).toHaveLength(1);
     expect(() => store.respond('demo-med-0900', { ...request, value: 'unsure' })).toThrow(
-      '요청 ID',
+      'request ID',
     );
     expect(
       store.respond('demo-med-0900', {
@@ -44,7 +44,7 @@ describe('durable self reports', () => {
         requestId: 'stale',
         expectedResponseId: null,
       }),
-    ).toThrow('기록이 변경');
+    ).toThrow('record has changed');
     wallTime = new Date('2026-10-20T00:02:00Z');
     const result = store.respond('demo-med-0900', {
       value: 'unsure',
@@ -89,7 +89,7 @@ describe('durable self reports', () => {
 });
 
 describe('foreground cue boundaries', () => {
-  it('claims once per client and expires against actual time while demo clock is paused', () => {
+  it('claims once per client and gives its owner time to finish narration after the start deadline', () => {
     const store = setup();
     const cue = store.advance(1).cue!;
     expect(cue.delivery).toBe('pending');
@@ -99,8 +99,39 @@ describe('foreground cue boundaries', () => {
     expect(() => store.deliver(cue.id, 'attempted', 'tab-b')).toThrow();
     expect(() => store.deliver(cue.id, 'played', 'tab-b')).toThrow();
     wallTime = new Date(wallTime.getTime() + 15_001);
+    expect(store.snapshot().cue?.delivery).toBe('attempted');
+    expect(() => store.deliver(cue.id, 'attempted', 'tab-a')).toThrow();
+    expect(() => store.deliver(cue.id, 'played', 'tab-b')).toThrow();
+    expect(store.deliver(cue.id, 'played', 'tab-a').cue?.delivery).toBe('played');
+    expect(store.deliver(cue.id, 'played', 'tab-a').cue?.delivery).toBe('played');
+  });
+  it('expires pending claims at 15 seconds and attempted completion at 150 seconds after the claim', () => {
+    const store = setup();
+    const staleCue = store.advance(1).cue!;
+    wallTime = new Date(wallTime.getTime() + 15_000);
+    expect(store.snapshot().cue?.delivery).toBe('unknown');
+    expect(() => store.deliver(staleCue.id, 'attempted', 'late-tab')).toThrow();
+    store.resetDemo();
+    const cue = store.advance(1).cue!;
+    wallTime = new Date(wallTime.getTime() + 14_000);
+    store.deliver(cue.id, 'attempted', 'tab-a');
+    wallTime = new Date(wallTime.getTime() + 149_999);
+    expect(store.snapshot().cue?.delivery).toBe('attempted');
+    wallTime = new Date(wallTime.getTime() + 1);
     expect(store.snapshot().cue?.delivery).toBe('unknown');
     expect(() => store.deliver(cue.id, 'played', 'tab-a')).toThrow();
+  });
+  it('invalidates claimed playback immediately when settings change or the timeline resets', () => {
+    const store = setup();
+    const cue = store.advance(1).cue!;
+    store.deliver(cue.id, 'attempted', 'tab-a');
+    store.updateSettings({ hourlyEnabled: false });
+    expect(() => store.deliver(cue.id, 'played', 'tab-a')).toThrow();
+    store.resetDemo();
+    const nextCue = store.advance(1).cue!;
+    store.deliver(nextCue.id, 'attempted', 'tab-a');
+    store.resetDemo();
+    expect(() => store.deliver(nextCue.id, 'played', 'tab-a')).toThrow();
   });
   it('only emits for the reached hour, respects quiet time and keeps medication visible', () => {
     const store = setup();
@@ -134,5 +165,76 @@ describe('foreground cue boundaries', () => {
       drafts: [],
       now: '2026-10-19T23:59:00.000Z',
     });
+  });
+});
+
+describe('live daily schedule', () => {
+  it('follows the real clock across dates, preserves past reports, and never catches up missed cues', () => {
+    wallTime = new Date('2026-10-19T23:59:58Z');
+    const store = createStore(':memory:', () => wallTime, { mode: 'live' });
+    stores.push(store);
+    expect(store.snapshot()).toMatchObject({
+      mode: 'live',
+      now: wallTime.toISOString(),
+      cue: null,
+    });
+    const med = store.snapshot().medications[0];
+    wallTime = new Date('2026-10-20T00:00:03Z');
+    const cue = store.tick().cue!;
+    expect(cue.delivery).toBe('pending');
+    expect(cue.expiresAt).toBe('2026-10-20T00:00:15.000Z');
+    store.respond(med.id, { value: 'taken', requestId: 'live', expectedResponseId: null });
+    wallTime = new Date('2026-10-21T00:00:04Z');
+    const tomorrow = store.tick();
+    expect(tomorrow.cue?.id).toBe(cue.id);
+    expect(tomorrow.cue?.delivery).toBe('unknown');
+    expect(tomorrow.medications).toHaveLength(1);
+    expect(tomorrow.medications[0].response).toBeNull();
+    expect(tomorrow.medications[0].id).not.toBe(med.id);
+    expect(tomorrow.responses).toHaveLength(1);
+    store.resetDemo();
+    expect(store.snapshot().responses).toHaveLength(1);
+    expect(store.resumeLive().mode).toBe('live');
+  });
+  it('persists clock mode and records across restart without reauthorizing an hourly reminder', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'dayla-live-'));
+    dirs.push(dir);
+    const file = path.join(dir, 'state.sqlite');
+    wallTime = new Date('2026-10-19T23:59:58Z');
+    const store = createStore(file, () => wallTime, { mode: 'live' });
+    wallTime = new Date('2026-10-20T00:00:03Z');
+    const cue = store.tick().cue!;
+    const med = store.snapshot().medications[0];
+    store.respond(med.id, { value: 'unsure', requestId: 'live-persist', expectedResponseId: null });
+    store.deliver(cue.id, 'attempted', 'original-tab');
+    store.close();
+    const reopened = createStore(file, () => wallTime);
+    stores.push(reopened);
+    expect(reopened.tick()).toMatchObject({
+      mode: 'live',
+      cue: { id: cue.id, delivery: 'unknown' },
+      medications: [{ response: { value: 'unsure' } }],
+    });
+    expect(() => reopened.deliver(cue.id, 'played', 'original-tab')).toThrow();
+    expect(() => reopened.advance(1)).toThrow();
+    expect(reopened.resetDemo().mode).toBe('demo');
+  });
+  it('uses the configured zone offset on each side of DST and avoids duplicate day cards after a zone change', () => {
+    wallTime = new Date('2026-03-07T17:00:00Z');
+    const store = createStore(':memory:', () => wallTime, { mode: 'live' });
+    stores.push(store);
+    store.updateSettings({ timeZone: 'Asia/Tokyo' });
+    expect(store.snapshot().medications).toHaveLength(1);
+    store.updateSettings({ timeZone: 'America/New_York' });
+    expect(store.snapshot().medications.map((med) => med.scheduledAt)).toEqual([
+      '2026-03-07T14:00:00.000Z',
+    ]);
+    wallTime = new Date('2026-03-08T17:00:00Z');
+    expect(store.tick().medications[0].scheduledAt).toBe('2026-03-08T13:00:00.000Z');
+    expect(store.snapshot().visits[0].startsAt).toBe('2026-03-08T19:00:00.000Z');
+    wallTime = new Date('2026-11-01T17:00:00Z');
+    expect(store.tick().medications[0].scheduledAt).toBe('2026-11-01T14:00:00.000Z');
+    store.updateSettings({ timeZone: 'Asia/Kathmandu' });
+    expect(store.snapshot().medications[0].scheduledAt).toBe('2026-11-01T03:15:00.000Z');
   });
 });

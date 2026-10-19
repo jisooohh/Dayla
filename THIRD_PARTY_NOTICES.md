@@ -9,15 +9,19 @@
 
 The upstream README still contains a proprietary / all-rights-reserved statement. This inconsistency is disclosed; the explicit root MIT license at the identified commit is the permission used for this source adaptation. No permission is asserted for third-party assets in that repository.
 
-Actual adaptations:
+Design lineage and current destinations:
 
-| Upstream source                     | Dayla destination                             | Adaptation                                                                       |
-| ----------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------- |
-| `app/globals.css`                   | `src/client/styles.css`                       | Cream `#f9efe3` canvas and warm neutral palette                                  |
-| `app/(protected)/layout.tsx`        | `src/client/App.tsx`, `styles.css`            | White sidebar, separate content panel, orange active marker                      |
-| `components/dashboard/StatCard.tsx` | `src/client/features/Today.tsx`, `styles.css` | Rounded orange/cream card hierarchy, adapted into clock and next-response panels |
+| Upstream source                     | Dayla destination                    | Adaptation                                                                                                        |
+| ----------------------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `app/globals.css`                   | `src/client/styles.css`              | Earlier warm cream palette; current voice-first revision uses a quieter light canvas and soft gradient            |
+| `app/(protected)/layout.tsx`        | `src/client/App.tsx`, `styles.css`   | Sidebar and separate main-content composition, now with English feature tabs                                      |
+| `components/dashboard/StatCard.tsx` | `src/client/features/`, `styles.css` | Rounded card treatment inherited by secondary feature screens; the former Today clock-card view has been replaced |
 
-Dayla replaces trading/navigation content with Korean daily support, increases control sizes, adds responsive reflow, and uses dark text on orange plus a darker primary action for contrast. The Dayla wordmark and favicon are original. No upstream photos, Obsidianui branding, screenshots, external fonts, authentication or trading logic are distributed.
+The current Dayla home, SVG logo, favicon and animated character are original repository work. They do not copy Grok or upstream branding. The voice-first revision replaces the initial Korean dashboard with English conversation and sidebar features. No upstream photos, Obsidianui branding, screenshots, fonts, authentication or trading logic are distributed.
+
+## External services
+
+ElevenLabs and Composio are optional external services, not redistributed source dependencies. Their service/account terms govern use; the Dayla MIT license does not grant access to them. Browser speech support is provided by the user's browser. BBC News headlines remain attributed external content linked to their source; no license to the articles is asserted.
 
 ## Direct runtime dependencies
 

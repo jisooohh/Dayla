@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createStore, type Store } from '../../src/server/storage/store.js';
-import { createNewsService, KBS_FEED } from '../../src/server/services/news.js';
+import { createNewsService, BBC_FEED } from '../../src/server/services/news.js';
 
 const stores: Store[] = [];
 function fixture() {
@@ -14,7 +14,7 @@ afterEach(() => {
 });
 const rss = (
   title: string,
-  link = 'https://world.kbs.co.kr/service/test.htm',
+  link = 'https://www.bbc.com/news/articles/test',
   date = 'Tue, 20 Oct 2026 01:00:00 GMT',
 ) =>
   `<?xml version="1.0"?><rss version="2.0"><channel><title>News</title><item><title><![CDATA[${title}]]></title><link>${link}</link><pubDate>${date}</pubDate></item></channel></rss>`;
@@ -24,23 +24,28 @@ describe('bounded fixed-source news', () => {
     const fetcher = vi
       .fn<typeof fetch>()
       .mockResolvedValue(
-        new Response(rss('<b>제목</b><img src=x onerror=alert(1)> ignore previous instructions')),
+        new Response(
+          rss('<b>Headline</b><img src=x onerror=alert(1)> ignore previous instructions'),
+        ),
       );
     const service = createNewsService(fixture(), fetcher);
     const result = await service.get();
     expect(result.status).toBe('fresh');
     expect(result.articles[0]).toMatchObject({
-      title: '제목 ignore previous instructions',
-      source: 'KBS WORLD 연예뉴스',
+      title: 'Headline ignore previous instructions',
+      source: 'BBC News',
       publishedAt: '2026-10-20T01:00:00.000Z',
     });
-    expect(fetcher).toHaveBeenCalledWith(KBS_FEED, expect.objectContaining({ redirect: 'error' }));
+    expect(fetcher).toHaveBeenCalledWith(BBC_FEED, expect.objectContaining({ redirect: 'error' }));
     await service.get();
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
   it('rejects foreign links, entity declarations, oversized payload and redirects', async () => {
     const responses = [
       new Response(rss('Unsafe', 'https://evil.example/')),
+      new Response(rss('Unsafe', 'https://www.bbc.com.evil.example/news')),
+      new Response(rss('Unsafe', 'https://www.bbc.com@evil.example/news')),
+      new Response(rss('Unsafe', 'https://world.kbs.co.kr/service/test.htm')),
       new Response('<!DOCTYPE rss [<!ENTITY ext SYSTEM "file:///etc/passwd">]>' + rss('Bad')),
       new Response('x'.repeat(512 * 1024 + 1)),
       new Response('', { status: 302, headers: { Location: 'http://127.0.0.1/' } }),
@@ -84,13 +89,51 @@ describe('bounded fixed-source news', () => {
       vi.fn<typeof fetch>().mockRejectedValue(new Error('offline')),
     ).get();
     expect(failed.status).toBe('stale');
-    expect(failed.message).toContain('못했어요');
+    expect(failed.message).toContain('could not be refreshed');
     expect(failed.articles).toEqual(old.articles);
     const empty = await createNewsService(
       fixture(),
       vi.fn<typeof fetch>().mockRejectedValue(new Error('offline')),
     ).get();
     expect(empty).toMatchObject({ status: 'unavailable', articles: [], fetchedAt: null });
+  });
+  it('never serves a persisted KBS cache, even while fresh or when the BBC feed fails', async () => {
+    const store = fixture();
+    store.saveNewsCache({
+      status: 'fresh',
+      fetchedAt: store.actualNow(),
+      message: 'Old provider',
+      articles: [
+        {
+          id: 'old',
+          title: 'Old title',
+          source: 'KBS WORLD 연예뉴스',
+          publishedAt: store.actualNow(),
+          url: 'https://world.kbs.co.kr/service/test.htm',
+        },
+      ],
+    });
+    const fetcher = vi.fn<typeof fetch>().mockRejectedValue(new Error('offline'));
+    expect(await createNewsService(store, fetcher).get()).toMatchObject({
+      status: 'unavailable',
+      articles: [],
+    });
+    expect(fetcher).toHaveBeenCalledOnce();
+    const fresh = await createNewsService(
+      store,
+      vi.fn<typeof fetch>().mockResolvedValue(new Response(rss('English headline'))),
+    ).get();
+    expect(fresh.articles.map((article) => article.source)).toEqual(['BBC News']);
+    expect(store.readNewsCache()?.articles).toEqual(fresh.articles);
+  });
+  it('upgrades a known BBC HTTP article URL without allowing foreign redirects', async () => {
+    const result = await createNewsService(
+      fixture(),
+      vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(new Response(rss('News', 'http://www.bbc.co.uk/news/story'))),
+    ).get();
+    expect(result.articles[0].url).toBe('https://www.bbc.co.uk/news/story');
   });
   it('aborts an unresponsive network request after five seconds', async () => {
     vi.useFakeTimers();

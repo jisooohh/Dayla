@@ -1,16 +1,16 @@
 # Dayla
 
-**A little help, every day.**
+**A little company, every day.**
 
-Dayla is a Korean daily companion demo for older adults: a clear clock, self-reported medication responses, planned visits, and a kind sentence to share with family. It runs on one PC and stores its fictional records locally.
+Dayla is an English voice companion for everyday routines. A quiet home screen greets you according to the time of day, with one place to speak or type and a small animated companion. Medication check-ins, schedules, family drafts, news and settings live in the sidebar.
 
-데일라는 **시간 확인 → 내 응답 기록 → 오늘 방문 일정 → 가족 이야기 초안**으로 이어지는 해커톤 시연 서비스입니다.
+Built for an awake PC with a local server. The conversation engine supports a bounded set of everyday requests; it is not a general-purpose language model. Medication responses are self-reports and require confirmation before saving.
 
-![Dayla desktop demo with a clock, next response and daily visit](docs/assets/dayla-home.png)
+![Dayla voice-first home](docs/assets/dayla-home.png)
 
 ## Run locally
 
-Use Node.js **22 LTS, 22.12 or newer** and npm. SQLite uses a native module; use an actively supported Node 22 release if installation fails.
+Use Node.js **22 LTS, 22.12 or newer** and npm. SQLite uses a native module; use a supported Node 22 release if installation fails.
 
 ```sh
 npm ci
@@ -18,50 +18,64 @@ npm run build
 npm start
 ```
 
-Open **http://127.0.0.1:3001**. Development with hot reload: `npm run dev`, then http://127.0.0.1:5173. Stop with Ctrl+C.
+Open **http://127.0.0.1:3001**. For hot reload, run `npm run dev` and open http://127.0.0.1:5173. Stop with Ctrl+C.
 
-No account, API key, cloud model, Cline installation or paid service is needed. Cline can be added later as a development tool; see [the handoff](docs/CLINE_TASK.md).
+Typing, schedules, local records and family drafts work without an API key. Cline is an optional development tool, not an application dependency; see [the handoff](docs/CLINE_TASK.md).
 
-## Three-minute demo
+## Connect a voice
 
-1. The clock starts at **08:59 on October 20, 2026, Asia/Seoul**. It stays paused until you choose **시연 시간 1분 앞으로**.
-2. At **09:00**, select **내 응답 남기기**, choose a response for fictional **예시 약 A**, and confirm. A saved state appears only after the server acknowledges the write.
-3. Continue to **오늘 일정 살펴보기**. The helper's **15:00 planned visit** can be delayed or cancelled.
-4. Continue to **가족과 나눌 이야기 만들기**, choose a topic, and read the local draft. No message is sent.
-5. Reload and open **내 기록**: the response and corrections remain. Old hourly announcements do not replay.
+Copy `.env.example` to `.env` and fill in one of these server-only configurations using an existing account. Restart the server after changing it. Never put credentials in client code or commit `.env`.
 
-Use the labelled reset action to erase **demo records only**. Details: [demo script](docs/DEMO.md).
+| Route                                  | Variables                                            |
+| -------------------------------------- | ---------------------------------------------------- |
+| ElevenLabs through Composio, preferred | `COMPOSIO_API_KEY`, `COMPOSIO_ELEVENLABS_ACCOUNT_ID` |
+| ElevenLabs directly                    | `ELEVENLABS_API_KEY`                                 |
+| Voice selection for either route       | `ELEVENLABS_VOICE_ID`                                |
 
-## Voice and news
+The Composio account ID must identify your connected **ElevenLabs** account. When both Composio values are present, that route takes priority. A provider failure is reported rather than silently switching accounts. `ELEVENLABS_VOICE_ID` defaults to the voice in `.env.example`.
 
-- Buttons complete the entire demo. No microphone or speech recognition is enabled.
-- Optional speech accepts only browser-reported local Korean voices. In Settings, play the harmless test sentence **offline**, then confirm that you heard Korean. Availability depends on the PC/browser. Playback completion is never treated as proof of hearing or taking medication.
-- Hourly cues require the page to remain foreground, a running server, and verified voice setup. Sleep, lock and closed tabs cannot provide reliable reminders. Keep existing phone alarms.
-- The optional news panel fetches up to three titles from a fixed KBS WORLD Korean RSS feed, with original links and timestamps. Network failures and stale articles are labelled. News is not needed for the demo.
+Press the microphone to start a short recording, then press it again to finish. Audio is transcribed into English, passed to Dayla's conversation rules, and answered with synthesized speech. The character responds to the measured microphone and cloud playback audio level. Recordings are handled in memory and are not written to the local database.
+
+If cloud voice is not configured, Dayla offers browser speech **only after an explicit choice**. Browser recognition may send audio to the browser vendor's service; it is not an offline promise. Browser speech output uses available voices reported as local and English. Its character animation follows speaking state because the browser does not expose that voice's audio waveform. Unsupported recognition or missing voices leave typing available.
+
+Configuration status means credentials are present, not that an account or paid request has been verified. Live Composio/ElevenLabs success must be checked with the configured presentation device; see [verification status](docs/ACCEPTANCE.md).
+
+## One conversation, a few useful actions
+
+- Ask **“What time is it?”** or **“What is on my schedule?”**.
+- Say **“I took my medication”**, **“Not yet”**, or **“I am not sure”** for a due check-in. Dayla asks for confirmation; only **“Yes”** or **Confirm** saves the response.
+- Open Medication to review or correct a self-report. Corrections retain history.
+- Open Schedule for the planned visit, or Family to create a local message draft. No message is sent.
+- News retrieves up to three attributed English BBC News headlines with links and freshness information.
+
+Hourly check-ins require a running server, a foreground page and enabled voice. Missed announcements are not replayed after reconnect or restart. Sleep, screen lock and closed tabs are outside the delivery guarantee.
+
+The default clock follows current time. Presentation controls are available only with `?presenter=1`; the separate [presenter guide](docs/DEMO.md) explains the repeatable morning flow. They do not change the computer's clock.
 
 ## Structure
 
 ```text
 src/
   client/
-    App.tsx             # navigation, snapshot lifecycle, foreground cues
+    App.tsx             # navigation, conversation and foreground cue lifecycle
+    components/Brand.tsx # original SVG mark and animated companion
     components.tsx      # shared headings and confirmation dialog
-    features/           # responses, visits, family, news, settings
-    lib/                # HTTP client and local speech adapter
+    features/           # medication, visits, family, news and settings
+    lib/                # HTTP client and voice lifecycle
     styles.css          # responsive visual system
   server/
     domain/             # time and validation rules
     http/               # localhost API and request validation
-    services/           # bounded RSS retrieval
-    storage/            # SQLite schema, transactions, demo state
-    index.ts            # server and expiry scheduler lifecycle
-  shared/contracts.ts   # transport types, no server code in client
-tests/                  # domain, API, speech and browser tests
-docs/                   # design, demo, provenance, verification, Cline handoff
+    services/           # conversation rules, cloud voice and bounded RSS
+    storage/            # SQLite schema, transactions, clock and records
+    index.ts            # environment, server and scheduler lifecycle
+  shared/contracts.ts   # transport types, no server imports in the client
+tests/                  # domain, API, voice and browser tests
+docs/                   # design, presenter guide, provenance and Cline handoff
 var/                    # local SQLite files, ignored by Git
 ```
 
-One package and one lockfile keep setup small. React + Vite serve the UI; Express + Zod validate requests; SQLite persists responses and correction history. `node-cron` expires announcements. There is no LLM runtime or messaging provider to configure.
+One package and lockfile keep setup small. React + Vite provide the UI; Express + Zod validate requests; SQLite persists responses and correction history. `node-cron` advances the live clock and expires announcements. Provider adapters use server-side HTTP without adding a runtime agent framework.
 
 ## Verification
 
@@ -75,16 +89,16 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-Browser tests start a separate server on port 3101 with `var/e2e.sqlite`. They never reset the normal demo database. They require permission to bind loopback ports. See [acceptance evidence and remaining manual checks](docs/ACCEPTANCE.md).
+Browser tests use a separate server on port 3101 and `var/e2e.sqlite`. They require loopback access. See [acceptance evidence and device checks](docs/ACCEPTANCE.md); mocked speech tests do not prove actual microphone quality or provider connectivity.
 
 ## Data and scope
 
-All seeded names and schedules are fictional. The clock and schedules are simulated; database writes are real. Response timestamps use the actual PC clock. `DAYLA_DB_PATH` can select another **demo-only** database; default: `var/dayla-demo.sqlite`. `PORT` defaults to 3001. The server binds only to `127.0.0.1`.
+Seeded medication labels and schedules are fictional. Database writes are real. Response timestamps use the actual PC clock, including during the controlled presentation flow. `DAYLA_DB_PATH` selects the local database; its default is `var/dayla.sqlite`. `PORT` defaults to 3001. The server binds to `127.0.0.1` only.
 
-This is a hackathon prototype, not a medical device or production care service. It does not verify doses or visits, prescribe actions, contact family, or promise background delivery. Local storage is not encrypted. Authentication, real schedule editing, notifications while closed, remote access, and production deployment are outside this demo.
+This is a hackathon prototype, not a medical device or production care service. It does not verify doses or visits, prescribe actions, send family messages, or promise background delivery. Local storage is not encrypted. Cloud speech sends audio or response text to the configured services. Do not use sensitive personal data for a presentation.
 
 ## Open source
 
-Dayla code is [MIT licensed](LICENSE). The cream canvas, sidebar composition and rounded orange cards adapt the user-selected [Project-1](https://github.com/Atharvsinh-codez/Project-1) source under its root MIT license. Original images, logos and fonts are not included. See [third-party notices](THIRD_PARTY_NOTICES.md) for the exact revision, license mismatch in its README, and dependency licenses.
+Dayla is [MIT licensed](LICENSE). The original sidebar and card layout adapted the user-selected [Project-1](https://github.com/Atharvsinh-codez/Project-1); the current home adds an original Dayla SVG logo, character and soft gradient. Upstream images, branding and fonts are not copied. See [third-party notices](THIRD_PARTY_NOTICES.md) for provenance, the upstream license discrepancy, and dependency notices.
 
 Contributions: [CONTRIBUTING.md](CONTRIBUTING.md). Security boundary: [SECURITY.md](SECURITY.md).

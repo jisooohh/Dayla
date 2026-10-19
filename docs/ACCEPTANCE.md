@@ -1,42 +1,30 @@
 # Dayla verification evidence
 
-Verified on 2026-10-20 (Asia/Seoul), macOS arm64, Node22.13.0, Playwright1.64.1 / Chromium156.0.8078.4. Cline authentication is deferred by the user; it is not required to run or verify Dayla.
+## Current voice-first revision
 
-## Automated checks
+Verified on 2026-10-20 using Node22.13.0 and Playwright1.64.1 / Chromium156:
 
-| Check                                             | Evidence                                                                                                                                                                             |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Formatting, lint, TypeScript and production build | `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm run build`                                                                                                         |
-| 19 unit/integration tests                         | `npm test`:6 store/domain,6 RSS,2 HTTP,5 speech tests                                                                                                                                |
-| 8 browser scenarios                               | `npm run test:e2e`; isolated port3101 and `var/e2e.sqlite`                                                                                                                           |
-| Response durability and corrections               | SQLite close/reopen preserves records; duplicate request IDs are idempotent; stale edits reject; correction retains its predecessor                                                  |
-| Cue separation and expiry                         | One atomic claim, wall-clock expiry, restart invalidation, quiet hours; no claim replay on reload                                                                                    |
-| Voice lifecycle                                   | Remote/non-Korean voices rejected; fallback cannot inherit another voice's confirmation; delayed claim cancelled by Stop before utterance                                            |
-| Failure states                                    | Failed response save keeps confirmation open without saved claim; slow polling still updates; disconnect disables mutations and recovery reconnects                                  |
-| Main flow                                         | 08:59→09:00→self-report→correction→reload→visit change/cancel→family draft; zero external browser requests in this flow                                                              |
-| Accessibility                                     | Axe WCAG2 AA scan on Today, medication and family screens: zero detected violations; keyboard dialog activation/focus; main action28px and at least72px high; large-text setting32px |
-| Reflow                                            | Desktop1440px,720px (equivalent CSS width for200% zoom on1440px),390px: no horizontal overflow; screenshots manually reviewed                                                        |
-| News                                              | Fixed HTTPS source, redirect/host/size/timeout bounds, decoded inert text, source/URL/time, cache and stale/unavailable paths                                                        |
+- Formatting, ESLint, TypeScript and production build pass.
+- **48 unit/API tests pass** across storage, clock, conversation, RSS, speech playback and voice-provider adapters.
+- **16 browser scenarios pass**, including medication confirmation and durability, correction history, visit editing, persisted family drafts, offline/error behavior, fallback consent, late-result cancellation and non-interrupting hourly cues.
+- The cloud path uses Chromium's real MediaRecorder, fake microphone device, AudioContext decoder/analyser and generated WAV responses. Recording begins on click, data is bounded, tracks end, playback completes and audio contexts close. External provider responses are mocked; this does not prove a live ElevenLabs account.
+- Axe found no violations in the tested home, medication and family states. Desktop1440px, reflow720px and mobile390px were checked. A final targeted visual test passed after hiding closed mobile navigation from keyboard focus. Native browser zoom and screen reader use remain manual checks.
+- [Desktop capture](assets/dayla-home.png) and [mobile capture](assets/dayla-mobile.png) were visually reviewed. The home has a greeting, character, soft gradient and one composer; secondary features stay in the sidebar. Product labels omit demo/example/simulation wording.
+- Live BBC retrieval returned HTTP200, fresh status and three attributed headlines. No paid voice request was made.
+- Cue start deadline remains15 seconds; a claimed owner has150 seconds to report completion. Reset, settings changes and restart still invalidate outstanding cues.
 
-Speech mocks test logic, not real Korean pronunciation or offline audio. Automated Axe scans do not prove complete screen-reader usability. Reflow uses an equivalent viewport width, not the browser's native zoom control.
+## Live provider and device status
 
-## Live external check
+The connected Composio tool was inspected during this revision: its ElevenLabs Instant account permits selected speech-synthesis/conversion tools, but speech-to-text is not in that allowlist. The user's private ElevenLabs connection is still initiated/pending. No server API credentials were found in the checked local project configuration. Dayla therefore offers explicitly selected browser voice; its optional Composio/direct ElevenLabs adapter is implemented but not live authenticated. Instant wallet calls were not executed. Configuration detection is not an account-health check.
 
-A real request to `/api/news` returned three attributed KBS WORLD Korean entertainment titles with `fresh` status. This is a point-in-time connectivity check, not an availability guarantee. Network and old-cache failures remain explicit. No model API or messaging service was called by the application.
+Before an audio presentation, verify microphone permission, English transcription, actual playback and character movement on the chosen PC/browser. Check the explicit browser fallback separately if it will be used. An automated browser mock cannot establish pronunciation, latency, listening quality, actual provider billing or offline behavior.
 
-## Manual device checks still required before an audio presentation
+Check native browser zoom and a screen reader on the presentation device. Automated accessibility scans and viewport reflow are useful but not complete accessibility proof. Sleep/lock and hidden-tab delivery are not guaranteed; keep existing phone reminders.
 
-- Select an actual Korean local voice, disconnect the Internet, play the harmless test phrase, listen, and explicitly confirm in Settings. No human listening/offline verification was performed during implementation.
-- Listen to time, schedule and fictional medication pronunciation on the presentation PC.
-- Check the complete flow with the presenter's screen reader and native200% browser zoom.
-- Sleep/lock behavior is not guaranteed or inferred. Keep existing phone reminders. The supported demo is an awake PC with the page foreground and local server running.
+## Historical baseline
 
-These checks do not block the complete button-based demo.
+Commit `27b94b09617afc8aafae51f1a965ae54c4746fd9` was verified on 2026-10-20 with Node 22.13.0 and Playwright 1.64.1 / Chromium 156. It passed formatting, lint, typecheck, build, 19 unit/integration tests and 8 browser scenarios. That baseline used a Korean dashboard, local Korean speech and a KBS news feed. Its counts, screenshots and external connectivity results must not be reused as evidence for the English voice-first revision.
 
 ## Open-source handoff
 
-- MIT root license and exact Project-1 license/provenance retained; no upstream photos, logos or fonts copied.
-- Client/server/shared boundaries, one package/lockfile, readable formatting and feature modules.
-- SQLite, secrets, recordings, raw agent sessions and browser traces excluded by `.gitignore`.
-- README covers run commands, fictional data, demo flow, system boundaries and optional later Cline work.
-- GitHub upload outcome is verified against the remote after committing; see the task delivery message for the commit reference.
+Preserve the MIT license and Project-1 provenance, original vector assets and dependency notices. Exclude databases, credentials, recordings and raw agent sessions from Git. Cline authentication remains deferred and no successful Cline implementation is claimed. The delivery message records the final commit and remote verification when available.

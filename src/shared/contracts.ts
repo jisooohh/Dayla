@@ -49,7 +49,7 @@ export interface FamilyDraft {
   sent: false;
 }
 export interface Snapshot {
-  mode: 'demo';
+  mode: 'demo' | 'live';
   now: string;
   serverTime: string;
   schedulerRunning: boolean;
@@ -76,3 +76,17 @@ export interface NewsResult {
 export interface ApiError {
   error: string;
 }
+
+export interface VoiceStatus {
+  provider: 'composio' | 'elevenlabs' | 'browser';
+  configured: boolean;
+  message: string;
+}
+
+export interface ConversationReply {
+  text: string;
+  confirmation?: { value: ReportValue; label: string };
+  action?: 'recorded' | 'cancelled' | 'draft';
+}
+
+export type VoicePhase = 'idle' | 'listening' | 'thinking' | 'speaking' | 'error';

@@ -8,12 +8,13 @@ export async function api<T>(path: string, body?: unknown, method = 'POST'): Pro
     signal: AbortSignal.timeout(10_000),
   });
   const result = await response.json();
-  if (!response.ok) throw new Error(result.error || '서버에서 요청을 처리하지 못했어요.');
+  if (!response.ok)
+    throw new Error(result.error || 'Couldn’t complete your request. Please try again.');
   return result as T;
 }
 export type Mutate = (path: string, body: unknown, method?: string) => Promise<Snapshot>;
 export function time(value: string, zone: string, hour12 = true) {
-  return new Intl.DateTimeFormat('ko-KR', {
+  return new Intl.DateTimeFormat('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12,
@@ -21,7 +22,7 @@ export function time(value: string, zone: string, hour12 = true) {
   }).format(new Date(value));
 }
 export function date(value: string, zone: string) {
-  return new Intl.DateTimeFormat('ko-KR', {
+  return new Intl.DateTimeFormat('en-US', {
     month: 'long',
     day: 'numeric',
     weekday: 'long',
@@ -29,7 +30,7 @@ export function date(value: string, zone: string) {
   }).format(new Date(value));
 }
 export const reportLabels = {
-  taken: '복용했다고 기록',
-  'not-yet': '아직 복용하지 않았다고 기록',
-  unsure: '잘 모르겠어요',
+  taken: 'I’ve taken it',
+  'not-yet': 'Not yet',
+  unsure: 'I’m not sure',
 };

@@ -1,39 +1,53 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ArrowRight,
-  History,
-  Home,
+  ArrowUp,
+  CalendarDays,
+  Heart,
+  Menu,
+  MessageCircle,
+  Mic,
+  Newspaper,
+  Pill,
   RotateCcw,
   Settings as SettingsIcon,
-  ShieldCheck,
   Square,
-  Sun,
-  Volume2,
+  X,
 } from 'lucide-react';
-import type { Snapshot } from '../shared/contracts';
-import { api, date, time } from './lib/api';
-import { useSpeech } from './lib/speech';
+import type { ConversationReply, Snapshot } from '../shared/contracts';
+import { api, time, reportLabels } from './lib/api';
+import { useVoice } from './lib/voice';
+import { DaylaCharacter, DaylaLogo } from './components/Brand';
 import { ConfirmDialog } from './components';
 import { Medication, Records } from './features/Medication';
 import { Family, News, Schedule } from './features/DailyLife';
 import { Settings } from './features/Settings';
-import { Today } from './features/Today';
 
-type View = 'today' | 'medication' | 'schedule' | 'family' | 'news' | 'records' | 'settings';
+type View = 'conversation' | 'medication' | 'schedule' | 'family' | 'news' | 'settings';
+type Turn = { id: string; role: 'user' | 'assistant'; text: string };
 const navigation = [
-  { view: 'today' as const, title: '오늘', icon: Home },
-  { view: 'records' as const, title: '내 기록', icon: History },
-  { view: 'settings' as const, title: '설정', icon: SettingsIcon },
+  { view: 'conversation' as const, title: 'Conversation', icon: MessageCircle },
+  { view: 'medication' as const, title: 'Medication', icon: Pill },
+  { view: 'schedule' as const, title: 'Schedule', icon: CalendarDays },
+  { view: 'family' as const, title: 'Family', icon: Heart },
+  { view: 'news' as const, title: 'News', icon: Newspaper },
+  { view: 'settings' as const, title: 'Settings', icon: SettingsIcon },
 ];
 
 export default function App() {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [online, setOnline] = useState(false);
-  const [view, setView] = useState<View>('today');
+  const [view, setView] = useState<View>('conversation');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [resetting, setResetting] = useState(false);
-  const [visible, setVisible] = useState(!document.hidden);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [input, setInput] = useState('');
+  const [turns, setTurns] = useState<Turn[]>([]);
+  const [confirmation, setConfirmation] = useState<ConversationReply['confirmation']>();
+  const [sending, setSending] = useState(false);
+  const sendingRef = useRef(false);
+  const sendRef = useRef<(text: string) => Promise<void>>(async () => {});
+  const sessionId = useRef(crypto.randomUUID());
   const snapshotRef = useRef<Snapshot | null>(null);
   const lastCue = useRef<string | null | undefined>(undefined);
   const baselineNeeded = useRef(true);
@@ -41,15 +55,17 @@ export default function App() {
   const pendingMutations = useRef(0);
   const cancellationEpoch = useRef(0);
   const clientId = useRef(crypto.randomUUID());
-  const speech = useSpeech({
+  const voice = useVoice({
     rate: snapshot?.settings.speechRate ?? 0.9,
     volume: snapshot?.settings.speechVolume ?? 1,
+    onTranscript: (text) => void sendRef.current(text),
   });
-  const speechRef = useRef(speech);
-  speechRef.current = speech;
+  const voiceRef = useRef(voice);
+  voiceRef.current = voice;
+  const presenter = new URLSearchParams(window.location.search).get('presenter') === '1';
   const cancelSpeech = useCallback(() => {
     cancellationEpoch.current += 1;
-    speechRef.current.stop();
+    voiceRef.current.stop();
   }, []);
   const accept = useCallback((next: Snapshot) => {
     const previous = snapshotRef.current;
@@ -87,11 +103,21 @@ export default function App() {
             settingsUnchanged &&
             cueStillActive &&
             Date.parse(cue.expiresAt) > Math.max(Date.now(), currentServerTime);
+          const due = next.medications.find(
+            (item) => !item.response && Date.parse(item.scheduledAt) <= Date.parse(next.now),
+          );
+          const text = `It's ${time(cue.scheduledAt, next.settings.timeZone)}.${due ? ` You have a medication check-in for ${due.label}. What would you like to record?` : ' I’m here if you need a little help.'}`;
+          if (canPlay)
+            setTurns((current) => [
+              ...current,
+              { id: crypto.randomUUID(), role: 'assistant', text },
+            ]);
           const status =
-            canPlay && speechRef.current.verified
-              ? await speechRef.current.speak(
-                  `지금은 ${time(cue.scheduledAt, next.settings.timeZone)}입니다.`,
-                )
+            canPlay &&
+            voiceRef.current.active &&
+            voiceRef.current.phase === 'idle' &&
+            !sendingRef.current
+              ? await voiceRef.current.speak(text)
               : 'unknown';
           await api(`/cues/${encodeURIComponent(cue.id)}/delivery`, {
             status,
@@ -99,9 +125,7 @@ export default function App() {
           });
         } catch {
           if (claimEpoch === cancellationEpoch.current)
-            setError(
-              '시간 안내의 재생 결과를 확인하지 못했어요. 다시 들으려면 시간 듣기를 눌러주세요.',
-            );
+            setError('I couldn’t confirm that reminder played. You can ask me for the time.');
         }
       })();
     }
@@ -132,7 +156,6 @@ export default function App() {
       }
     }
     const visibility = () => {
-      setVisible(!document.hidden);
       baselineNeeded.current = true;
       if (!document.hidden) void poll();
       else cancelSpeech();
@@ -169,52 +192,100 @@ export default function App() {
   }
   function navigate(next: View) {
     setView(next);
+    setMenuOpen(false);
     setError('');
     window.scrollTo({ top: 0, behavior: 'instant' });
     requestAnimationFrame(() => document.querySelector<HTMLElement>('main h1')?.focus());
   }
-  async function advance() {
-    setBusy(true);
+  async function send(text: string) {
+    text = text.trim();
+    if (!text || sendingRef.current || !online) return;
+    sendingRef.current = true;
+    setSending(true);
     setError('');
-    try {
-      await mutate('/demo/advance', { minutes: 1 });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '시연 시간을 변경하지 못했어요.');
-    } finally {
-      setBusy(false);
-    }
-  }
-  async function reset() {
+    setInput('');
     cancelSpeech();
+    const replyEpoch = cancellationEpoch.current;
+    const replySession = sessionId.current;
+    voice.setThinking(true);
+    setTurns((current) => [...current, { id: crypto.randomUUID(), role: 'user', text }]);
+    try {
+      const reply = await api<ConversationReply>('/conversation', {
+        text,
+        sessionId: sessionId.current,
+        requestId: crypto.randomUUID(),
+      });
+      if (replyEpoch !== cancellationEpoch.current || replySession !== sessionId.current) return;
+      setTurns((current) => [
+        ...current,
+        { id: crypto.randomUUID(), role: 'assistant', text: reply.text },
+      ]);
+      setConfirmation(reply.confirmation);
+      const sequence = ++requestSequence.current;
+      const next = await api<Snapshot>('/today');
+      if (sequence === requestSequence.current) accept(next);
+      if (replyEpoch !== cancellationEpoch.current || replySession !== sessionId.current) return;
+      voice.setThinking(false);
+      if (!document.hidden && replyEpoch === cancellationEpoch.current)
+        void voice.speak(reply.text);
+    } catch (e) {
+      if (replyEpoch !== cancellationEpoch.current || replySession !== sessionId.current) return;
+      voice.setThinking(false);
+      setError(e instanceof Error ? e.message : 'I couldn’t complete that. Please try again.');
+    } finally {
+      sendingRef.current = false;
+      setSending(false);
+    }
+  }
+  sendRef.current = send;
+  async function clockAction(path: string, body: unknown) {
     setBusy(true);
     setError('');
     try {
-      baselineNeeded.current = true;
-      await mutate('/demo/reset', { confirm: true });
-      setResetting(false);
-      navigate('today');
+      if (path !== '/demo/advance') {
+        cancelSpeech();
+        baselineNeeded.current = true;
+      }
+      await mutate(path, body);
+      if (path === '/demo/reset') {
+        setTurns([]);
+        setConfirmation(undefined);
+        sessionId.current = crypto.randomUUID();
+        setResetting(false);
+        navigate('conversation');
+      }
     } catch (e) {
-      setError(e instanceof Error ? e.message : '초기화를 확인하지 못했어요.');
+      setError(e instanceof Error ? e.message : 'Couldn’t update the clock.');
     } finally {
       setBusy(false);
     }
   }
-  function hearTime() {
-    if (snapshot)
-      void speech.speak(
-        `지금은 ${time(snapshot.now, snapshot.settings.timeZone)}입니다. ${date(snapshot.now, snapshot.settings.timeZone)}입니다.`,
-      );
-  }
-  const home = () => navigate('today');
-  // Adapted from Project-1 app/(protected)/layout.tsx, MIT © 2026 Atharvsinh Jadav.
-  // Keeps its cream outer canvas, separate white sidebar and active orange marker;
-  // replaces trading/auth navigation with accessible local Dayla navigation.
+  const home = () => navigate('conversation');
+  const hour = snapshot
+    ? Number(
+        new Intl.DateTimeFormat('en-US', {
+          hour: 'numeric',
+          hourCycle: 'h23',
+          timeZone: snapshot.settings.timeZone,
+        }).format(new Date(snapshot.now)),
+      )
+    : new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning.' : hour < 18 ? 'Good afternoon.' : 'Good evening.';
+  const micClick = () => (voice.phase === 'listening' ? voice.finish() : void voice.start());
   return (
     <div className={`app-shell ${snapshot?.settings.largeText ? 'large-text' : ''}`}>
       <a className="skip-link" href="#main">
-        본문으로 바로가기
+        Skip to content
       </a>
-      <aside className="sidebar">
+      <button
+        className="mobile-menu icon-button"
+        aria-label={menuOpen ? 'Close navigation' : 'Open navigation'}
+        aria-expanded={menuOpen}
+        onClick={() => setMenuOpen(!menuOpen)}
+      >
+        {menuOpen ? <X /> : <Menu />}
+      </button>
+      <aside className={`sidebar ${menuOpen ? 'is-open' : ''}`}>
         <a
           className="wordmark"
           href="#"
@@ -222,96 +293,182 @@ export default function App() {
             e.preventDefault();
             home();
           }}
-          aria-label="Dayla 오늘 화면"
+          aria-label="Dayla home"
         >
-          <span className="brand-symbol">
-            <Sun aria-hidden="true" size={28} />
-          </span>
-          dayla<span className="brand-dot">.</span>
+          <DaylaLogo />
         </a>
-        <p className="sidebar-caption">매일 곁에, 작은 도움</p>
-        <nav aria-label="주 메뉴">
+        <nav aria-label="Main navigation">
           {navigation.map((item) => (
             <button
               key={item.view}
-              className={`nav-item ${(item.view === 'today' ? !['settings', 'records'].includes(view) : view === item.view) ? 'active' : ''}`}
+              className={`nav-item ${view === item.view ? 'active' : ''}`}
               aria-current={view === item.view ? 'page' : undefined}
               onClick={() => navigate(item.view)}
             >
-              <item.icon aria-hidden="true" size={26} />
-              {item.title}
+              <item.icon size={23} aria-hidden="true" />
+              <span>{item.title}</span>
             </button>
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <span className="tiny-flower" aria-hidden="true">
-            ✳
-          </span>
+          <span className="presence-dot" />
           <p>
-            오늘도,
+            A little company.
             <br />
-            나의 속도로.
+            Every day.
           </p>
-          <span className="small muted">A little help, every day.</span>
         </div>
       </aside>
+      {menuOpen && (
+        <button
+          className="menu-backdrop"
+          aria-label="Close navigation"
+          onClick={() => setMenuOpen(false)}
+        />
+      )}
       <div className="workspace">
-        <div className="demo-ribbon">
-          <div>
-            <span className="demo-tag">DEMO</span>
-            <span>시연 중 · 가상 일정</span>
-            {snapshot && (
-              <span className="demo-time">
-                현재 {time(snapshot.now, snapshot.settings.timeZone, false)}
-              </span>
-            )}
-          </div>
-          <div>
-            <button disabled={busy || !online} onClick={() => void advance()}>
-              시연 시간 1분 앞으로 <ArrowRight aria-hidden="true" size={18} />
-            </button>
-            <button
-              className="reset-button"
-              disabled={busy || !online}
-              onClick={() => setResetting(true)}
-              aria-label="시연 데이터 초기화"
-            >
-              <RotateCcw aria-hidden="true" size={19} />
-              <span>초기화</span>
-            </button>
-          </div>
-        </div>
-        <div className="content-panel">
-          <header className="topbar">
-            <span className="small">DAYLA / 나의 하루</span>
-            <span className={`connection ${online && visible ? '' : 'warning'}`}>
-              <span className="status-dot" />
-              {!visible ? '화면 비활성' : online ? '로컬 서버 연결됨' : '서버 연결 확인 필요'}
-            </span>
-          </header>
-          {!online && (
-            <p className="error-note" role="status">
-              서버 연결을 확인하지 못했어요. 저장과 시간 변경은 연결 후 가능해요.
-            </p>
-          )}
-          {error && (
-            <p className="error-note" role="alert">
-              {error}
-            </p>
-          )}
-          <main id="main">
-            {!snapshot ? (
-              <div className="loading-state">
-                <Sun size={52} aria-hidden="true" />
-                <h1 tabIndex={-1}>오늘의 하루를 불러오고 있어요</h1>
-                <p>로컬 서버가 실행 중인지 확인해주세요.</p>
+        <header className="topbar">
+          <span>Your everyday companion</span>
+          <span className="topbar-date">
+            {snapshot && time(snapshot.now, snapshot.settings.timeZone)}
+          </span>
+        </header>
+        {!online && (
+          <p className="error-note connection-note" role="status">
+            Connecting to Dayla. Your messages will be ready when we reconnect.
+          </p>
+        )}
+        {error && (
+          <p className="error-note connection-note" role="alert">
+            {error}
+          </p>
+        )}
+        <main id="main" className={view === 'conversation' ? 'conversation-main' : 'feature-main'}>
+          {view === 'conversation' ? (
+            <div className={`conversation ${turns.length ? 'has-turns' : ''}`}>
+              <div className="welcome">
+                <DaylaCharacter phase={voice.phase} level={voice.level} />
+                <h1 tabIndex={-1}>{greeting}</h1>
+                <p>How are you feeling today?</p>
               </div>
-            ) : (
-              <>
-                {view === 'today' && (
-                  <Today snapshot={snapshot} navigate={navigate} hearTime={hearTime} />
-                )}
-                {view === 'medication' && (
+              <form
+                className={`composer ${voice.phase === 'listening' ? 'is-listening' : ''}`}
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void send(input);
+                }}
+              >
+                <label className="sr-only" htmlFor="message">
+                  Message Dayla
+                </label>
+                <input
+                  id="message"
+                  value={input}
+                  maxLength={1000}
+                  placeholder={
+                    voice.phase === 'listening' ? 'I’m listening…' : 'Talk to me, or type here…'
+                  }
+                  onChange={(e) => setInput(e.target.value)}
+                  disabled={sending}
+                  autoComplete="off"
+                />
+                <div className="composer-actions">
+                  <button
+                    type="button"
+                    className={`mic-button icon-button ${voice.phase === 'listening' ? 'listening' : ''}`}
+                    aria-label={voice.phase === 'listening' ? 'Finish speaking' : 'Start speaking'}
+                    disabled={!online || sending}
+                    onClick={micClick}
+                  >
+                    {voice.phase === 'listening' ? <Square size={23} /> : <Mic size={25} />}
+                  </button>
+                  <button
+                    type="submit"
+                    className="send-button icon-button"
+                    aria-label="Send message"
+                    disabled={!online || sending || !input.trim()}
+                  >
+                    <ArrowUp size={25} />
+                  </button>
+                </div>
+              </form>
+              {voice.needsBrowserConsent && !voice.browserConsent && (
+                <div className="voice-consent">
+                  <p>
+                    Your browser’s speech service will process microphone audio. Start only when
+                    you’re ready.
+                  </p>
+                  <button
+                    onClick={() => {
+                      voice.enableBrowserVoice();
+                      void voice.start();
+                    }}
+                  >
+                    Use browser voice
+                  </button>
+                </div>
+              )}
+              <div className="conversation-status" role="status">
+                {sending ? 'Thinking…' : voice.message || 'A moment together, at your pace.'}
+              </div>
+              {(voice.phase === 'speaking' ||
+                voice.phase === 'listening' ||
+                voice.phase === 'thinking') && (
+                <button className="quiet-control" onClick={cancelSpeech}>
+                  <Square size={16} />
+                  Stop{' '}
+                  {voice.phase === 'listening'
+                    ? 'listening'
+                    : voice.phase === 'thinking'
+                      ? 'waiting'
+                      : 'speaking'}
+                </button>
+              )}
+              {!!turns.length && (
+                <section
+                  className="conversation-history"
+                  aria-label="Conversation"
+                  aria-live="polite"
+                  aria-relevant="additions"
+                >
+                  {turns.slice(-12).map((turn) => (
+                    <div key={turn.id} className={`conversation-turn ${turn.role}`}>
+                      <span className="turn-author">
+                        {turn.role === 'assistant' ? 'Dayla' : 'You'}
+                      </span>
+                      <p>{turn.text}</p>
+                    </div>
+                  ))}
+                  {confirmation && (
+                    <div className="conversation-confirmation">
+                      <p>
+                        Record “{reportLabels[confirmation.value]}” for {confirmation.label}?
+                      </p>
+                      <div className="row">
+                        <button
+                          className="primary"
+                          disabled={sending || !online}
+                          onClick={() => void send('yes')}
+                        >
+                          Confirm
+                        </button>
+                        <button disabled={sending || !online} onClick={() => void send('no')}>
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  <button className="quiet-control" onClick={() => void voice.replay()}>
+                    <RotateCcw size={17} />
+                    Hear that again
+                  </button>
+                </section>
+              )}
+            </div>
+          ) : snapshot ? (
+            <>
+              {view === 'medication' && (
+                <>
                   <Medication
                     snapshot={snapshot}
                     mutate={mutate}
@@ -319,68 +476,61 @@ export default function App() {
                     next={() => navigate('schedule')}
                     back={home}
                   />
-                )}
-                {view === 'schedule' && (
-                  <Schedule
-                    snapshot={snapshot}
-                    mutate={mutate}
-                    online={online}
-                    next={() => navigate('family')}
-                    back={home}
-                  />
-                )}
-                {view === 'family' && <Family online={online} back={home} />}
-                {view === 'news' && <News speak={speech.speak} back={home} />}
-                {view === 'records' && <Records snapshot={snapshot} />}
-                {view === 'settings' && (
-                  <Settings snapshot={snapshot} mutate={mutate} online={online} speech={speech} />
-                )}
-              </>
-            )}
-          </main>
-          <div className="voice-status">
-            <Volume2 aria-hidden="true" size={20} />
-            <span role="status">{speech.status}</span>
-            {!speech.verified && (
-              <button className="text-button" onClick={() => navigate('settings')}>
-                음성 설정
-              </button>
-            )}
-          </div>
-          <footer className="playback-controls" aria-label="음성 및 화면 조작">
-            <button onClick={() => void speech.replay()}>
-              <RotateCcw aria-hidden="true" size={22} />
-              다시 듣기
+                  <Records snapshot={snapshot} />
+                </>
+              )}
+              {view === 'schedule' && (
+                <Schedule
+                  snapshot={snapshot}
+                  mutate={mutate}
+                  online={online}
+                  next={() => navigate('family')}
+                  back={home}
+                />
+              )}
+              {view === 'family' && (
+                <Family online={online} back={home} savedDraft={snapshot.drafts[0] ?? null} />
+              )}
+              {view === 'news' && <News speak={voice.speak} back={home} />}
+              {view === 'settings' && (
+                <Settings snapshot={snapshot} mutate={mutate} online={online} voice={voice} />
+              )}
+            </>
+          ) : (
+            <h1 tabIndex={-1}>Getting your day ready…</h1>
+          )}
+        </main>
+        {presenter && (
+          <aside className="presenter-controls" aria-label="Clock controls">
+            <span>{snapshot && time(snapshot.now, snapshot.settings.timeZone)}</span>
+            <button disabled={busy || !online} onClick={() => setResetting(true)}>
+              Reset morning
             </button>
-            <button onClick={cancelSpeech}>
-              <Square aria-hidden="true" size={20} />
-              그만 듣기
+            <button
+              disabled={busy || !online}
+              onClick={() => void clockAction('/demo/advance', { minutes: 1 })}
+            >
+              Advance 1 minute
             </button>
-            <button onClick={home}>
-              <Home aria-hidden="true" size={22} />
-              처음으로
+            <button
+              disabled={busy || !online}
+              onClick={() => void clockAction('/clock/live', { confirm: true })}
+            >
+              Use current time
             </button>
-          </footer>
-          <p className="local-note">
-            <ShieldCheck size={17} aria-hidden="true" />
-            가상 데이터로 체험하는 로컬 시연 · 음성 재생 완료는 청취 확인이 아니에요.
-          </p>
-        </div>
+          </aside>
+        )}
       </div>
       {resetting && (
         <ConfirmDialog
-          title="시연을 처음으로 돌릴까요?"
+          title="Start a fresh morning?"
           busy={busy}
           cancel={() => setResetting(false)}
-          confirm={() => void reset()}
-          confirmLabel="가상 데이터 초기화"
+          confirm={() => void clockAction('/demo/reset', { confirm: true })}
+          confirmLabel="Reset morning"
         >
-          <p>저장된 가상 응답과 초안이 지워지고 시연 시간이 오전 8시 59분으로 돌아가요.</p>
-          {error && (
-            <p role="alert" className="error-note">
-              {error}
-            </p>
-          )}
+          <p>This clears saved check-ins and drafts and returns the clock to 8:59 AM.</p>
+          {error && <p role="alert">{error}</p>}
         </ConfirmDialog>
       )}
     </div>

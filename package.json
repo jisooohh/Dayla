@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "A little help, every day. A local-first Korean daily companion demo for older adults.",
+  "description": "A little company, every day. An English voice companion for everyday routines.",
   "license": "MIT",
   "engines": {
     "node": "^22.12.0"

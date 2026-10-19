@@ -13,9 +13,9 @@ import { api, date, time, type Mutate } from '../lib/api';
 import { NextButton, SectionHeading } from '../components';
 
 export const visitLabels = {
-  scheduled: '방문 예정',
-  changed: '시간 변경 · 방문 예정',
-  cancelled: '취소된 일정',
+  scheduled: 'Scheduled',
+  changed: 'Rescheduled',
+  cancelled: 'Cancelled',
 };
 export function Schedule({
   snapshot,
@@ -52,9 +52,9 @@ export function Schedule({
         'PATCH',
       );
       setEditing(null);
-      setMessage('서버에 일정 변경을 저장했어요.');
+      setMessage('Your schedule has been updated.');
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : '저장을 확인하지 못했어요.');
+      setMessage(e instanceof Error ? e.message : 'Couldn’t confirm the change was saved.');
     } finally {
       setBusy(false);
     }
@@ -62,8 +62,8 @@ export function Schedule({
   return (
     <>
       <SectionHeading
-        eyebrow="03 · 오늘 일정"
-        title="오늘은 이런 만남이 있어요"
+        eyebrow="YOUR DAY"
+        title="A little something to look forward to."
         description={date(snapshot.now, snapshot.settings.timeZone)}
         back={back}
       />
@@ -83,19 +83,19 @@ export function Schedule({
                 {time(visit.startsAt, snapshot.settings.timeZone)} –{' '}
                 {time(visit.endsAt, snapshot.settings.timeZone)}
               </p>
-              <p className="small muted">등록한 예정이에요. 실제 방문 여부는 확인하지 않아요.</p>
+              <p className="small muted">A planned visit. Attendance hasn’t been confirmed.</p>
               <button
                 className="text-button"
                 disabled={!online || busy}
                 onClick={() => setEditing(editing?.id === visit.id ? null : visit)}
               >
-                시연 일정 변경
+                Edit visit
               </button>
               {editing?.id === visit.id && (
                 <div className="edit-visit">
-                  <p className="small">가상 일정을 변경하거나 취소할 수 있어요.</p>
+                  <p className="small">Make a change to your visit.</p>
                   <button disabled={busy} onClick={() => void update(visit, 'changed')}>
-                    30분 늦추기
+                    Move 30 minutes later
                   </button>
                   <button
                     disabled={busy}
@@ -103,7 +103,7 @@ export function Schedule({
                       void update(visit, visit.status === 'cancelled' ? 'scheduled' : 'cancelled')
                     }
                   >
-                    {visit.status === 'cancelled' ? '예정으로 되돌리기' : '방문 취소하기'}
+                    {visit.status === 'cancelled' ? 'Restore visit' : 'Cancel visit'}
                   </button>
                 </div>
               )}
@@ -116,7 +116,7 @@ export function Schedule({
           {message}
         </p>
       )}
-      <NextButton onClick={next}>가족과 나눌 이야기 만들기</NextButton>
+      <NextButton onClick={next}>Make a family note</NextButton>
     </>
   );
 }
@@ -124,25 +124,33 @@ export function Schedule({
 const topics = [
   {
     value: 'hello' as const,
-    title: '안부를 전하고 싶어요',
-    description: '오늘도 잘 지내고 있는지',
+    title: 'Say hello',
+    description: 'A little note to let them know you care',
     icon: Sun,
   },
   {
     value: 'meal' as const,
-    title: '함께 밥 먹고 싶어요',
-    description: '맛있는 한 끼를 함께',
+    title: 'Share a meal',
+    description: 'Good food and a little time together',
     icon: Coffee,
   },
   {
     value: 'walk' as const,
-    title: '같이 걷고 싶어요',
-    description: '날씨 좋은 날, 천천히',
+    title: 'Take a walk',
+    description: 'Fresh air, at your own pace',
     icon: MessageCircle,
   },
 ];
-export function Family({ online, back }: { online: boolean; back: () => void }) {
-  const [draft, setDraft] = useState<FamilyDraft | null>(null);
+export function Family({
+  online,
+  back,
+  savedDraft,
+}: {
+  online: boolean;
+  back: () => void;
+  savedDraft: FamilyDraft | null;
+}) {
+  const [draft, setDraft] = useState<FamilyDraft | null>(savedDraft);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   async function makeDraft(topic: DraftTopic) {
@@ -151,7 +159,7 @@ export function Family({ online, back }: { online: boolean; back: () => void }) 
     try {
       setDraft(await api<FamilyDraft>('/drafts', { topic }));
     } catch (e) {
-      setError(e instanceof Error ? e.message : '초안을 만들지 못했어요.');
+      setError(e instanceof Error ? e.message : 'Couldn’t prepare your note.');
     } finally {
       setBusy(false);
     }
@@ -159,9 +167,9 @@ export function Family({ online, back }: { online: boolean; back: () => void }) 
   return (
     <>
       <SectionHeading
-        eyebrow="04 · 가족 이야기"
-        title="어떤 이야기를 나눠볼까요?"
-        description="마음에 드는 이야기를 고르면 짧은 문장을 준비해드려요."
+        eyebrow="STAY CLOSE"
+        title="A small note. A little closer."
+        description="Choose what’s on your mind, and I’ll help find the words."
         back={back}
       />
       <div className="topic-list">
@@ -185,16 +193,18 @@ export function Family({ online, back }: { online: boolean; back: () => void }) 
           {error}
         </p>
       )}
-      {busy && <p role="status">문장을 준비하고 있어요…</p>}
+      {busy && <p role="status">Finding the words…</p>}
       {draft && (
         <section className="draft-panel" aria-live="polite">
-          <p className="eyebrow">가족에게 전하고 싶은 말</p>
+          <p className="eyebrow">A NOTE FOR YOUR FAMILY</p>
           <blockquote>{draft.text}</blockquote>
-          <span className="tag">초안 · 아직 보내지 않았어요</span>
-          <p className="small muted">직접 이야기할 때 참고하세요. 메시지 전송 기능은 없어요.</p>
+          <span className="tag">Draft · Not sent</span>
+          <p className="small muted">
+            Keep this for your next conversation. No message has been sent.
+          </p>
         </section>
       )}
-      <NextButton onClick={back}>오늘 화면으로 돌아가기</NextButton>
+      <NextButton onClick={back}>Back to conversation</NextButton>
     </>
   );
 }
@@ -215,7 +225,7 @@ export function News({
     try {
       setResult(await api<NewsResult>('/news'));
     } catch (e) {
-      setError(e instanceof Error ? e.message : '뉴스 연결을 확인하지 못했어요.');
+      setError(e instanceof Error ? e.message : 'Couldn’t connect to the news.');
     } finally {
       setBusy(false);
     }
@@ -223,14 +233,14 @@ export function News({
   return (
     <>
       <SectionHeading
-        eyebrow="잠깐, 세상 이야기"
-        title="오늘의 뉴스 한 조각"
-        description="출처가 있는 기사 제목을 최대 세 개 가져와요."
+        eyebrow="AROUND THE WORLD"
+        title="Something new to talk about."
+        description="A few headlines, with a link to the original story."
         back={back}
       />
       <button className="primary" disabled={busy} onClick={() => void load()}>
         <RefreshCw size={24} aria-hidden="true" />
-        {busy ? '뉴스를 가져오는 중…' : '뉴스 가져오기'}
+        {busy ? 'Finding headlines…' : 'Get the news'}
       </button>
       {error && (
         <p className="error-note" role="alert">
@@ -241,28 +251,28 @@ export function News({
         <>
           <p className="notice" role="status">
             {result.status === 'fresh'
-              ? '최근 가져온 뉴스'
+              ? 'Latest headlines'
               : result.status === 'stale'
-                ? '이전에 저장한 뉴스 · 최신 내용이 아닐 수 있어요'
-                : '뉴스를 가져오지 못했어요'}{' '}
+                ? 'Saved headlines · May not be up to date'
+                : 'News is unavailable right now'}{' '}
             · {result.message}
           </p>
           {result.fetchedAt && (
             <p className="small muted">
-              가져온 시각: {new Date(result.fetchedAt).toLocaleString('ko-KR')}
+              Retrieved: {new Date(result.fetchedAt).toLocaleString('en-US')}
             </p>
           )}
           <div className="news-list">
             {result.articles.map((article) => (
               <article key={article.id}>
                 <p className="small muted">
-                  {article.source} · {new Date(article.publishedAt).toLocaleString('ko-KR')}
+                  {article.source} · {new Date(article.publishedAt).toLocaleString('en-US')}
                 </p>
                 <h2>{article.title}</h2>
                 <div className="row wrap">
                   <button onClick={() => void speak(`${article.source}. ${article.title}`)}>
                     <Volume2 aria-hidden="true" size={22} />
-                    제목 듣기
+                    Read headline
                   </button>
                   <a
                     className="button"
@@ -270,8 +280,8 @@ export function News({
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    원문 보기 <ArrowUpRight size={22} aria-hidden="true" />
-                    <span className="sr-only">새 탭</span>
+                    Read story <ArrowUpRight size={22} aria-hidden="true" />
+                    <span className="sr-only">Opens in a new tab</span>
                   </a>
                 </div>
               </article>

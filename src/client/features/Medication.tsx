@@ -38,10 +38,10 @@ export function Medication({
         requestId: pending.requestId,
         expectedResponseId: pending.occurrence.response?.id ?? null,
       });
-      setSaved('본인 응답을 저장했어요. 아래에서 기록 시각을 확인하세요.');
+      setSaved('Your check-in is saved.');
       setPending(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : '저장을 확인하지 못했어요.');
+      setError(e instanceof Error ? e.message : 'Couldn’t confirm your check-in was saved.');
     } finally {
       setBusy(false);
     }
@@ -49,9 +49,9 @@ export function Medication({
   return (
     <>
       <SectionHeading
-        eyebrow="02 · 내 응답"
-        title="지금의 응답을 남겨주세요"
-        description="직접 답하신 내용을 기록해요. 실제 복용 여부를 확인하는 기능은 아니에요."
+        eyebrow="YOUR DAILY CHECK-IN"
+        title="How are you doing with your medication?"
+        description="Keep a record of what you tell me. You can update it whenever you need."
         back={back}
       />
       {saved && (
@@ -63,26 +63,26 @@ export function Medication({
       {!due.length && (
         <div className="empty-state">
           <Clock3 size={44} aria-hidden="true" />
-          <h2>아직 응답할 약 알림이 없어요</h2>
-          <p>시연 시간을 오전 9시로 넘기면 예시 일정이 나타나요.</p>
+          <h2>Your next check-in is coming up</h2>
+          <p>Your medication check-in will appear at its scheduled time.</p>
         </div>
       )}
       {due.map((occurrence) => (
         <section className="medication-block" key={occurrence.id}>
           <div className="row spread">
-            <span className="tag">가상 복약 일정</span>
+            <span className="tag">Medication check-in</span>
             <span>{time(occurrence.scheduledAt, snapshot.settings.timeZone)}</span>
           </div>
           <h2>{occurrence.label}</h2>
           <p className="muted">
             {occurrence.response
-              ? `저장된 응답: ${reportLabels[occurrence.response.value]}`
-              : '응답이 아직 확인되지 않았어요.'}
+              ? `Your response: ${reportLabels[occurrence.response.value]}`
+              : 'No response recorded yet.'}
           </p>
           {occurrence.response && (
             <p className="small">
-              기록 시각 {time(occurrence.response.recordedAt, snapshot.settings.timeZone)} ·
-              아래에서 정정할 수 있어요
+              Recorded at {time(occurrence.response.recordedAt, snapshot.settings.timeZone)} · You
+              can update this below
             </p>
           )}
           <div className="response-options">
@@ -105,15 +105,15 @@ export function Medication({
             })}
           </div>
           <p className="small muted">
-            약의 양이나 시간을 바꾸는 안내는 하지 않아요. 이전 시간의 알림이라면 응답 기록을
-            확인해주세요.
+            Follow the instructions from your care team. Dayla records your response without
+            changing your medication plan.
           </p>
         </section>
       ))}
-      <NextButton onClick={next}>오늘 일정 살펴보기</NextButton>
+      <NextButton onClick={next}>See your schedule</NextButton>
       {pending && (
         <ConfirmDialog
-          title="이 응답을 기록할까요?"
+          title="Save this check-in?"
           busy={busy}
           confirm={() => void save()}
           cancel={() => setPending(null)}
@@ -123,7 +123,7 @@ export function Medication({
             {time(pending.occurrence.scheduledAt, snapshot.settings.timeZone)}
           </p>
           <p className="confirmation-value">{reportLabels[pending.value]}</p>
-          <p className="small">이전 응답이 있다면 정정 이력을 함께 남겨요.</p>
+          <p className="small">Your earlier response will remain in your history.</p>
           {error && (
             <p role="alert" className="error-note">
               {error}
@@ -138,11 +138,11 @@ export function Medication({
 export function Records({ snapshot }: { snapshot: Snapshot }) {
   return (
     <>
-      <SectionHeading
-        eyebrow="나의 기록"
-        title="답하신 그대로, 차곡차곡"
-        description="본인 응답과 정정 이력을 함께 보관해요."
-      />
+      <header className="history-heading">
+        <p className="eyebrow">YOUR HISTORY</p>
+        <h2>Your check-ins</h2>
+        <p className="muted">Your responses and updates, in one place.</p>
+      </header>
       {snapshot.responses.length ? (
         <ol className="record-list">
           {[...snapshot.responses].reverse().map((record) => (
@@ -151,13 +151,13 @@ export function Records({ snapshot }: { snapshot: Snapshot }) {
               <div>
                 <p className="small muted">
                   {time(record.recordedAt, snapshot.settings.timeZone)} ·{' '}
-                  {record.supersedesId === null ? '첫 응답' : '정정된 응답'}
+                  {record.supersedesId === null ? 'First response' : 'Updated response'}
                 </p>
                 <h2>{reportLabels[record.value]}</h2>
                 <p className="small">
                   {snapshot.medications.find((item) => item.id === record.occurrenceId)?.label ??
-                    '복약 응답'}{' '}
-                  · 본인 보고
+                    'Medication check-in'}{' '}
+                  · Self-reported
                 </p>
               </div>
             </li>
@@ -166,8 +166,8 @@ export function Records({ snapshot }: { snapshot: Snapshot }) {
       ) : (
         <div className="empty-state">
           <Clock3 aria-hidden="true" size={44} />
-          <h2>아직 남긴 응답이 없어요</h2>
-          <p>약 알림에서 답하시면 이곳에 보관해요.</p>
+          <h2>No check-ins yet</h2>
+          <p>Your saved responses will appear here.</p>
         </div>
       )}
     </>

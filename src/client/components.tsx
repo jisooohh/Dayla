@@ -16,7 +16,7 @@ export function SectionHeading({
     <header className="section-heading">
       {back && (
         <button className="back-button" onClick={back}>
-          <ArrowLeft aria-hidden="true" size={22} /> 오늘로
+          <ArrowLeft aria-hidden="true" size={22} /> Back to conversation
         </button>
       )}
       <p className="eyebrow">{eyebrow}</p>
@@ -39,7 +39,7 @@ export function ConfirmDialog({
   busy,
   confirm,
   cancel,
-  confirmLabel = '이대로 기록하기',
+  confirmLabel = 'Save check-in',
 }: {
   title: string;
   children: ReactNode;
@@ -67,10 +67,10 @@ export function ConfirmDialog({
       {children}
       <div className="dialog-actions">
         <button autoFocus disabled={busy} onClick={cancel}>
-          돌아가기
+          Cancel
         </button>
         <button className="primary" disabled={busy} onClick={confirm}>
-          {busy ? '저장 확인 중…' : confirmLabel}
+          {busy ? 'Saving…' : confirmLabel}
         </button>
       </div>
     </dialog>

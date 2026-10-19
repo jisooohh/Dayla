@@ -3,9 +3,16 @@ import { createHash } from 'node:crypto';
 import type { NewsArticle, NewsResult } from '../../shared/contracts.js';
 import type { Store } from '../storage/store.js';
 
-// Listed at https://world.kbs.co.kr/service/about_rss.htm?lang=k.
+// BBC News publishes this English headline feed.
 // Use the HTTPS endpoint only; no redirect or caller-selected URL is accepted.
-export const KBS_FEED = 'https://world.kbs.co.kr/rss/rss_enternews.htm?lang=k';
+export const BBC_FEED = 'https://feeds.bbci.co.uk/news/rss.xml';
+const ARTICLE_HOSTS = new Set([
+  'www.bbc.co.uk',
+  'www.bbc.com',
+  'bbc.co.uk',
+  'bbc.com',
+  'news.bbc.co.uk',
+]);
 const MAX_BYTES = 512 * 1024;
 const CACHE_TTL = 5 * 60_000;
 const ARTICLE_MAX_AGE = 72 * 60 * 60_000;
@@ -62,7 +69,27 @@ export function createNewsService(store: Store, fetcher: typeof fetch = fetch) {
   const parser = new Parser();
   async function refresh(): Promise<NewsResult> {
     const now = Date.parse(store.actualNow());
-    const cache = store.readNewsCache();
+    const storedCache = store.readNewsCache();
+    // A provider change must not surface previously persisted KBS headlines.
+    const cache =
+      storedCache?.articles.length &&
+      storedCache.articles.every((article) => {
+        try {
+          const url = new URL(article.url);
+          return (
+            article.source === 'BBC News' &&
+            ARTICLE_HOSTS.has(url.hostname) &&
+            url.protocol === 'https:' &&
+            !url.username &&
+            !url.password &&
+            !url.port
+          );
+        } catch {
+          return false;
+        }
+      })
+        ? storedCache
+        : null;
     if (
       cache?.fetchedAt &&
       now - Date.parse(cache.fetchedAt) < CACHE_TTL &&
@@ -74,12 +101,12 @@ export function createNewsService(store: Store, fetcher: typeof fetch = fetch) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5_000);
     try {
-      const response = await fetcher(KBS_FEED, {
+      const response = await fetcher(BBC_FEED, {
         signal: controller.signal,
         redirect: 'error',
         headers: { Accept: 'application/rss+xml, application/xml, text/xml' },
       });
-      if (!response.ok || response.redirected || (response.url && response.url !== KBS_FEED))
+      if (!response.ok || response.redirected || (response.url && response.url !== BBC_FEED))
         throw new Error('Feed unavailable');
       if (Number(response.headers.get('content-length') ?? 0) > MAX_BYTES || !response.body)
         throw new Error('Feed size');
@@ -113,8 +140,7 @@ export function createNewsService(store: Store, fetcher: typeof fetch = fetch) {
           continue;
         }
         // Feed links sometimes use HTTP; upgrade the known first-party host only.
-        if (url.hostname !== 'world.kbs.co.kr' || url.username || url.password || url.port)
-          continue;
+        if (!ARTICLE_HOSTS.has(url.hostname) || url.username || url.password || url.port) continue;
         if (!['http:', 'https:'].includes(url.protocol)) continue;
         url.protocol = 'https:';
         const published = Date.parse(item.isoDate || item.pubDate!);
@@ -124,7 +150,7 @@ export function createNewsService(store: Store, fetcher: typeof fetch = fetch) {
         articles.push({
           id: createHash('sha256').update(url.href).digest('hex').slice(0, 16),
           title,
-          source: 'KBS WORLD 연예뉴스',
+          source: 'BBC News',
           publishedAt: new Date(published).toISOString(),
           url: url.href,
         });
@@ -140,8 +166,8 @@ export function createNewsService(store: Store, fetcher: typeof fetch = fetch) {
         fetchedAt: store.actualNow(),
         articles: selected,
         message: stale
-          ? '최근 3일보다 오래된 기사가 포함되어 있어요. 발행 시각을 확인해주세요.'
-          : 'KBS WORLD에서 가져온 연예뉴스 제목이에요.',
+          ? 'Some headlines are more than three days old. Please check their publication dates.'
+          : 'Headlines from BBC News.',
       };
       store.saveNewsCache(result);
       lastResult = result;
@@ -151,13 +177,13 @@ export function createNewsService(store: Store, fetcher: typeof fetch = fetch) {
         ? {
             ...cache,
             status: 'stale',
-            message: '뉴스를 새로 가져오지 못했어요. 이전에 저장한 기사예요.',
+            message: 'News could not be refreshed. These are previously saved headlines.',
           }
         : {
             status: 'unavailable',
             fetchedAt: null,
             articles: [],
-            message: '뉴스를 가져오지 못했어요. 다른 기능은 계속 사용할 수 있어요.',
+            message: 'News is unavailable right now. You can still use the other features.',
           };
       return lastResult;
     } finally {
