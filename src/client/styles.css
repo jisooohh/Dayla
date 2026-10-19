@@ -536,9 +536,14 @@ small {
   width: 44px;
   height: 44px;
   min-height: 44px;
-  border-radius: 13px;
-  background: #ffffff80;
-  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: #57534b;
+  border: 0;
+}
+.navigation-toggle:hover {
+  background: #443b2d0a;
+  color: #302d27;
 }
 .nav-item svg {
   flex-shrink: 0;
@@ -993,11 +998,9 @@ dialog h2 {
     left: 17px;
     top: 17px;
     z-index: 20;
-    background: #fffcf0e6;
-    width: 45px;
-    height: 45px;
-    min-height: 45px;
-    border: 1px solid #ffffffeb;
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
   }
   .menu-backdrop {
     display: block;

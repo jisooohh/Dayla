@@ -3,8 +3,7 @@ import {
   ArrowUp,
   CalendarDays,
   Heart,
-  PanelLeftClose,
-  PanelLeftOpen,
+  PanelLeft,
   MessageCircle,
   Mic,
   Newspaper,
@@ -300,7 +299,7 @@ export default function App() {
         title={menuOpen ? 'Close navigation' : 'Open navigation'}
         onClick={() => setMenuOpen((open) => !open)}
       >
-        {menuOpen ? <PanelLeftClose aria-hidden="true" /> : <PanelLeftOpen aria-hidden="true" />}
+        <PanelLeft size={20} strokeWidth={1.6} aria-hidden="true" />
       </button>
       <aside id="dayla-sidebar" className={`sidebar ${menuOpen ? 'is-open' : ''}`}>
         <a
