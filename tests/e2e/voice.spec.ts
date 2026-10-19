@@ -301,3 +301,40 @@ test('the character starts and finishes listening with pointer or keyboard', asy
   await page.getByRole('button', { name: 'Finish speaking', exact: true }).press('Space');
   await expect(character).toBeVisible();
 });
+
+test('cat branding reacts to pointer and speech and respects reduced motion', async ({
+  page,
+}, testInfo) => {
+  await browserVoices(page);
+  await page.goto('/');
+  const character = page.locator('.dayla-character');
+  const face = character.locator('.cat-face');
+  await expect(page.getByRole('button', { name: 'Start speaking' })).toBeEnabled();
+  expect(
+    await page.locator('body').evaluate((element) => getComputedStyle(element).backgroundImage),
+  ).toBe('none');
+  await expect(page.locator('.nav-item svg').first()).toHaveAttribute('width', '18');
+  expect(await page.locator('.dayla-logo .cat-silhouette').getAttribute('d')).toBe(
+    await character.locator('.cat-silhouette').getAttribute('d'),
+  );
+  await character.hover({ position: { x: 140, y: 45 } });
+  await expect
+    .poll(() => face.evaluate((element) => getComputedStyle(element).transform))
+    .not.toBe('matrix(1, 0, 0, 1, 0, 0)');
+  await page.mouse.move(350, 10);
+  await startListening(page);
+  await expect(page.locator('.character-listening')).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('cat-listening.png'), animations: 'disabled' });
+  await page.evaluate(() =>
+    (window as unknown as HarnessWindow).__voiceHarness.emit('Who is visiting today?'),
+  );
+  await expect(character.locator('.cat-mouth-speaking')).toBeVisible();
+  await expect(page.getByText('I’m speaking. Tap me to reply.')).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('cat-speaking.png'), animations: 'disabled' });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(character.locator('.cat-mouth-speaking')).toHaveCSS('animation-name', 'none');
+  await expect(character.locator('.cat-mouth-speaking')).toHaveCSS('transform', 'none');
+  await expect(character.locator('.cat-eye').first()).toHaveCSS('animation-name', 'none');
+  await character.hover({ position: { x: 140, y: 45 } });
+  await expect(face).toHaveCSS('transform', 'none');
+});

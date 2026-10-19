@@ -13,11 +13,11 @@ Design lineage and current destinations:
 
 | Upstream source                     | Dayla destination                    | Adaptation                                                                                                        |
 | ----------------------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| `app/globals.css`                   | `src/client/styles.css`              | Earlier warm cream palette; current voice-first revision uses a quieter light canvas and soft gradient            |
+| `app/globals.css`                   | `src/client/styles.css`              | Earlier warm cream palette; current voice-first revision uses a flat warm-white canvas                            |
 | `app/(protected)/layout.tsx`        | `src/client/App.tsx`, `styles.css`   | Sidebar and separate main-content composition, now with English feature tabs                                      |
 | `components/dashboard/StatCard.tsx` | `src/client/features/`, `styles.css` | Rounded card treatment inherited by secondary feature screens; the former Today clock-card view has been replaced |
 
-The current Dayla home, SVG logo, favicon and animated character are original repository work. They do not copy Grok or upstream branding. The voice-first revision replaces the initial Korean dashboard with English conversation and sidebar features. No upstream photos, Obsidianui branding, screenshots, fonts, authentication or trading logic are distributed.
+The current Dayla home is repository work. The SVG cat, matching logo and favicon are a vector interpretation of the yellow cat image supplied by the user on 2026-10-20; they are not derived from Project-1 or Grok branding. The voice-first revision replaces the initial Korean dashboard with English conversation and sidebar features. No upstream photos, Obsidianui branding, screenshots, fonts, authentication or trading logic are distributed.
 
 ## External services
 

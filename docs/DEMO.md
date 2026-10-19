@@ -12,7 +12,7 @@ This guide is separate from the product UI. The app does not display demo/exampl
 
 ## Three-minute flow
 
-1. **A quiet greeting.** Show the character and “Good morning.” Say **“What time is it?”** using the microphone, then finish recording. Let Dayla answer. A successful user-initiated voice interaction enables subsequent foreground announcements.
+1. **A quiet greeting.** Show the character and “Good morning.” Say **“What time is it?”** after tapping the cat, then tap the cat again to finish recording. Let Dayla answer. A successful user-initiated voice interaction enables subsequent foreground announcements.
 2. **A timely check-in.** Choose **Advance 1 minute**. At 09:00, Dayla announces the time and the due medication check-in once. It asks what to record; it does not tell the person to take a dose.
 3. **A confirmed response.** Say **“I took my medication.”** Dayla asks for confirmation. Say **“Yes”** or select **Confirm**. Open Medication to show the saved self-report and its timestamp. **“Not yet”** and **“I am not sure”** are equally valid choices.
 4. **What comes next.** Return to Conversation and ask **“What is on my schedule?”** Open Schedule to show the planned 15:00 visit. A scheduled visit is not proof it happened.

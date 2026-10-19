@@ -1,7 +1,7 @@
 :root {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
   color: #443b2d;
-  background: #fffcf4;
+  background: #fcfbf7;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -21,11 +21,7 @@
 }
 body {
   margin: 0;
-  background:
-    radial-gradient(ellipse at 5% 35%, #f5d67b38, transparent 45%),
-    radial-gradient(ellipse at 65% 62%, #f8d46a40, transparent 48%),
-    radial-gradient(ellipse at 88% 12%, #ffedb533, transparent 38%), #fffcf4;
-  background-attachment: fixed;
+  background: #fcfbf7;
 }
 button,
 input,
@@ -1176,31 +1172,66 @@ dialog h2 {
   flex-shrink: 0;
 }
 .wordmark-dot {
-  color: #cc7653;
+  color: #a78226;
 }
 .dayla-character {
-  width: 142px;
-  height: 142px;
+  width: 180px;
+  height: 148px;
   position: relative;
 }
-.dayla-character svg {
+.dayla-character .cat-art {
   display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 4px 12px #e8c54b26);
+}
+.dayla-character .cat-body {
+  transform: translateY(var(--voice-lift, 0px));
+  transition: transform 0.09s linear;
+}
+.cat-face {
+  transform: translate(var(--gaze-x, 0px), var(--gaze-y, 0px));
+  transition: transform 0.18s ease-out;
+}
+.dayla-character .cat-eye {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: dayla-blink 5.2s ease-in-out infinite;
+}
+.cat-mouth-speaking {
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scaleY(var(--mouth-open, 0.25));
   transition: transform 0.08s linear;
+}
+.character-speaking:not(.has-audio) .cat-mouth-speaking {
+  animation: dayla-talk 0.42s ease-in-out infinite alternate;
 }
 .character-idle {
   animation: dayla-breathe 5s ease-in-out infinite;
 }
-.character-listening::after {
-  content: '';
-  position: absolute;
-  inset: 8px;
-  border: 1px solid #b8c8a4;
-  border-radius: 50%;
-  opacity: 0.55;
-  animation: dayla-listen 2s ease-in-out infinite;
+.character-listening {
+  animation: dayla-attentive 2.8s ease-in-out infinite;
+}
+.character-listening .cat-art {
+  filter: drop-shadow(0 0 12px #e8c54b66);
 }
 .character-thinking {
   animation: dayla-think 1.8s ease-in-out infinite;
+}
+.character-thinking .cat-face {
+  transform: translate(3px, -3px);
+}
+.character-button:hover .cat-art {
+  filter: drop-shadow(0 5px 14px #e8c54b55);
+}
+@media (prefers-reduced-motion: reduce) {
+  .dayla-character .cat-body,
+  .dayla-character .cat-face,
+  .dayla-character .cat-mouth-speaking {
+    transform: none;
+  }
 }
 .conversation-turn p {
   font-size: 28px;
@@ -1220,15 +1251,32 @@ dialog h2 {
     transform: translateY(-4px);
   }
 }
-@keyframes dayla-listen {
+@keyframes dayla-blink {
+  0%,
+  42%,
+  46%,
+  100% {
+    transform: scaleY(1);
+  }
+  44% {
+    transform: scaleY(0.12);
+  }
+}
+@keyframes dayla-talk {
+  from {
+    transform: scaleY(0.25);
+  }
+  to {
+    transform: scaleY(0.85);
+  }
+}
+@keyframes dayla-attentive {
   0%,
   100% {
-    transform: scale(0.94);
-    opacity: 0.3;
+    transform: rotate(-3deg) translateY(-2px);
   }
   50% {
-    transform: scale(1.06);
-    opacity: 0.65;
+    transform: rotate(2deg) translateY(-4px);
   }
 }
 @keyframes dayla-think {
@@ -1266,11 +1314,7 @@ dialog h2 {
     height: 35px;
   }
   .has-turns .dayla-character {
-    height: 112px;
-  }
-  .has-turns .dayla-character svg {
-    width: 112px;
-    height: 112px;
-    margin: auto;
+    width: 140px;
+    height: 115px;
   }
 }

@@ -99,6 +99,6 @@ This is a hackathon prototype, not a medical device or production care service. 
 
 ## Open source
 
-Dayla is [MIT licensed](LICENSE). The original sidebar and card layout adapted the user-selected [Project-1](https://github.com/Atharvsinh-codez/Project-1); the current home adds an original Dayla SVG logo, character and soft gradient. Upstream images, branding and fonts are not copied. See [third-party notices](THIRD_PARTY_NOTICES.md) for provenance, the upstream license discrepancy, and dependency notices.
+Dayla is [MIT licensed](LICENSE). The original sidebar and card layout adapted the user-selected [Project-1](https://github.com/Atharvsinh-codez/Project-1); the current home uses an animated SVG cat based on the user-provided character reference, shared with the logo and favicon, on a flat warm-white canvas. Upstream images, branding and fonts are not copied. See [third-party notices](THIRD_PARTY_NOTICES.md) for provenance, the upstream license discrepancy, and dependency notices.
 
 Contributions: [CONTRIBUTING.md](CONTRIBUTING.md). Security boundary: [SECURITY.md](SECURITY.md).

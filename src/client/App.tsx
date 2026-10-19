@@ -322,7 +322,7 @@ export default function App() {
               title={menuOpen ? undefined : item.title}
               onClick={() => navigate(item.view)}
             >
-              <item.icon size={23} aria-hidden="true" />
+              <item.icon size={18} strokeWidth={1.7} aria-hidden="true" />
               <span>{item.title}</span>
             </button>
           ))}
@@ -382,11 +382,13 @@ export default function App() {
                 <p>How are you feeling today?</p>
               </div>
               <div id="voice-status" className="conversation-status" role="status">
-                {sending
+                {sending || voice.phase === 'thinking'
                   ? 'Thinking…'
                   : voice.phase === 'listening'
                     ? 'I’m listening. Tap me again to finish.'
-                    : voice.message || 'Tap me to start speaking.'}
+                    : voice.phase === 'speaking'
+                      ? 'I’m speaking. Tap me to reply.'
+                      : voice.message || 'Tap me to start speaking.'}
               </div>
               {(voice.phase === 'speaking' ||
                 voice.phase === 'listening' ||
